@@ -1,0 +1,50 @@
+﻿输入                                             期望         实际          
+------------------------------------------------------------------------
+1 引言                                           H1         heading1     ✓
+1. 引言                                          H1         heading1     ✓
+1、引言                                           H1         heading1     ✓
+1．引言                                           H1         heading1     ✓
+1 引言：研究背景                                      H1         heading1     ✓
+第一章 引言                                         H1         heading1     ✓
+第1章 引言                                         H1         heading1     ✓
+一、引言                                           H1         heading1     ✓
+（一）引言                                          H1         heading1     ✓
+（1）引言                                          H1         heading1     ✓
+5 结论与政策建议                                      H1         heading1     ✓
+1 引言。                                          正文         body         ✓
+1 这是一个非常长的标题用来测试超过六十个字符时是否还会被识别成标题因为标题通常不会这么   正文         heading1     ✗
+1.1 背景                                         H2         heading2     ✓
+1.1 背景：文献综述                                    H2         heading2     ✓
+1.1.1 小节                                       H3         heading3     ✓
+4.2.1 变量定义                                     H3         heading3     ✓
+2.1 股权集中度与企业绩效：激励效应与隧道效应                       H2         heading2     ✓
+摘要                                             ABS        abstract_heading ✓
+摘 要                                            ABS        abstract_heading ✓
+摘要：                                            ABS        abstract_heading ✓
+摘要：随着短视频平台的快速发展……                              正文         abstract_heading ✗
+ABSTRACT                                       正文         abstract_heading ✗
+Abstract:                                      正文         abstract_heading ✗
+关键词                                            KW         keywords     ✓
+关键词：数据挖掘；机器学习                                  KW         keywords     ✓
+KEY WORDS                                      正文         keywords     ✗
+参考文献                                           REF        ref_heading  ✓
+参考文献：                                          REF        ref_heading  ✓
+[1] 张三. 论文标题[J]. 期刊, 2024.                     REFITEM    ref_item     ✓
+1. 张三. 论文标题[M]. 北京: 出版社, 2023.                 REFITEM    ref_item     ✓
+张三. 论文标题[J]. 期刊, 2024.                         REFITEM    ref_item     ✓
+图 1 系统架构图                                      CAP        caption      ✓
+图1 系统架构图                                       CAP        caption      ✓
+图1-1 系统架构图                                     CAP        caption      ✓
+表 2 变量说明                                       CAP        caption      ✓
+附录                                             APP        appendix     ✓
+致谢                                             正文         body         ✓
+目录                                             正文         body         ✓
+目 录                                            正文         body         ✓
+------------------------------------------------------------------------
+通过 35/40
+失败项:
+  ✗ '1 这是一个非常长的标题用来测试超过六十个字符时是否还会被识别成标题因为标题通常不会这么长' 期望=正文 实际=heading1
+  ✗ '摘要：随着短视频平台的快速发展……' 期望=正文 实际=abstract_heading
+  ✗ 'ABSTRACT' 期望=正文 实际=abstract_heading
+  ✗ 'Abstract:' 期望=正文 实际=abstract_heading
+  ✗ 'KEY WORDS' 期望=正文 实际=keywords

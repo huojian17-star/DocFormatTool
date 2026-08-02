@@ -223,6 +223,19 @@ def _guess_heading_by_format(p, cfg, text):
     return 3
 
 
+def _set_pstyle(p_el, style_id: str):
+    """给段落设置 Word 内置样式（如 Heading1），让标题进入样式集/导航窗格/目录收集。"""
+    pPr = p_el.find(qn("w:pPr"))
+    if pPr is None:
+        pPr = OxmlElement("w:pPr")
+        p_el.insert(0, pPr)
+    ps = pPr.find(qn("w:pStyle"))
+    if ps is None:
+        ps = OxmlElement("w:pStyle")
+        pPr.insert(0, ps)
+    ps.set(qn("w:val"), style_id)
+
+
 def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
     """统一处理一个段落（顶层正文/标题/表格内/文本框内）。
 
@@ -305,17 +318,26 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
     t, _ = infer._classify(text)
     if t == "heading1":
         S.format_heading(p, cfg, 1)
+        _set_pstyle(p_el, "Heading1")  # 进入 Word 样式集/目录收集
         st["h1"] = st.get("h1", 0) + 1
     elif t == "heading2":
         S.format_heading(p, cfg, 2)
+        _set_pstyle(p_el, "Heading2")
         st["h2"] = st.get("h2", 0) + 1
     elif t == "heading3":
         S.format_heading(p, cfg, 3)
+        _set_pstyle(p_el, "Heading3")
         st["h3"] = st.get("h3", 0) + 1
     elif t == "abstract_heading" and len(text) > 20:
         # "摘要：xxx" 长句（摘要标题+内容混合）→ 按正文处理，不套标题格式
         S.format_body(p, cfg)
-    elif t in ("ref_heading", "abstract_heading", "appendix"):
+    elif t == "abstract_heading":
+        # 摘要标题：独立字体（黑体四号居中，区别于章节标题）
+        fd = cfg["fonts"].get("abstract_heading", cfg["fonts"]["heading1"])
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in p_el.iter(qn("w:r")):
+            S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"], bold=True)
+    elif t in ("ref_heading", "appendix"):
         S.format_heading(p, cfg, 1)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     elif t == "ref_item":
@@ -541,7 +563,7 @@ def _build_cover(doc, cfg, cover_seg):
     if not texts:
         return
     cov = cfg["cover"]
-    title_font = cfg["fonts"]["heading1"]
+    title_font = cfg["fonts"].get("doc_title", cfg["fonts"]["heading1"])
     body_font = cfg["fonts"]["body"]
 
     school = next((t for t in texts if "大学" in t or "学院" in t), "")
@@ -569,7 +591,7 @@ def _build_cover(doc, cfg, cover_seg):
     doc.add_paragraph()
     if title:
         _line(title, title_font["cn"], title_font["en"],
-              cov.get("title_size_pt", 22), bold=True, before=24)
+              cov.get("title_size_pt", title_font["size_pt"]), bold=True, before=24)
     doc.add_paragraph()
     for t in fields + others:
         _line(t, body_font["cn"], body_font["en"], body_font["size_pt"])
@@ -682,7 +704,7 @@ def _apply_body(doc, cfg, structs, base_dir):
         elif t == "heading3":
             _add_para(doc, cfg, text, "heading3")
         elif t == "abstract_heading":
-            _add_para(doc, cfg, cfg["abstract"].get("heading_text", "摘  要"), "heading1", center=True)
+            _add_para(doc, cfg, cfg["abstract"].get("heading_text", "摘  要"), "abs_heading", center=True)
         elif t == "keywords":
             label = cfg["abstract"].get("keywords_label", "关键词：")
             _add_para(doc, cfg, label + text if not text.startswith(label) else text, "body")
@@ -712,15 +734,25 @@ def _add_para(doc, cfg, text, kind, center=False):
         if center:
             pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _add_inline_runs(p, cfg, text, fd, bold=fd.get("bold", True))
+        _set_py_style(p, doc, "Heading 1")
+    elif kind == "abs_heading":
+        fd = f.get("abstract_heading", f["heading1"])
+        pf.line_spacing = par_ls(cfg)
+        pf.space_before = Pt(6); pf.space_after = Pt(6)
+        if center:
+            pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _add_inline_runs(p, cfg, text, fd, bold=fd.get("bold", True))
     elif kind == "heading2":
         fd = f["heading2"]
         pf.line_spacing = par_ls(cfg)
         pf.space_before = Pt(3); pf.space_after = Pt(3)
         _add_inline_runs(p, cfg, text, fd, bold=fd.get("bold", True))
+        _set_py_style(p, doc, "Heading 2")
     elif kind == "heading3":
         fd = f["heading3"]
         pf.line_spacing = par_ls(cfg)
         _add_inline_runs(p, cfg, text, fd, bold=fd.get("bold", True))
+        _set_py_style(p, doc, "Heading 3")
     elif kind == "caption":
         fd = f["caption"]
         pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -745,6 +777,14 @@ def _add_para(doc, cfg, text, kind, center=False):
 
 
 _INLINE_RE = re.compile(r"(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)")
+
+
+def _set_py_style(p, doc, style_name):
+    """python-docx 方式设置段落样式（从零生成路径用）。"""
+    try:
+        p.style = doc.styles[style_name]
+    except Exception:
+        pass
 
 
 def _add_inline_runs(p, cfg, text, fd, bold=False):

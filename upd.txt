@@ -1,0 +1,10 @@
+﻿模拟环境: C:\Users\28253\AppData\Local\Temp\DocFormatTool Update Test
+旧版存在: True | 新版存在: True
+update.bat 已启动（startfile）
+
+--- 验证结果 ---
+old 被 new 覆盖: True
+new 已删除: True
+bat 已自删: True
+DocFormatTool 进程数: 2
+模拟环境已清理

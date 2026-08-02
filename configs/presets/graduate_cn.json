@@ -7,6 +7,8 @@
   },
   "fonts": {
     "body": {"cn": "宋体", "en": "Times New Roman", "size_pt": 12},
+    "doc_title": {"cn": "黑体", "en": "Times New Roman", "size_pt": 22, "bold": true},
+    "abstract_heading": {"cn": "黑体", "en": "Times New Roman", "size_pt": 14, "bold": true},
     "heading1": {"cn": "黑体", "en": "Times New Roman", "size_pt": 16, "bold": true},
     "heading2": {"cn": "黑体", "en": "Times New Roman", "size_pt": 14, "bold": true},
     "heading3": {"cn": "黑体", "en": "Times New Roman", "size_pt": 12, "bold": true},

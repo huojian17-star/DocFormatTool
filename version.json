@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
-  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.2/DocFormatTool.exe",
-  "note": "新增：摘要标题/文档标题独立配置（高级选项可调）；修复：文件选择弹两次、日期误判为标题"
+  "version": "1.0.3",
+  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.3/DocFormatTool.exe",
+  "note": "界面改为清爽浅色办公主题（白底+学术蓝），主按钮蓝色高亮，整体更干净专业"
 }

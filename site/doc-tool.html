@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="doc-title">论文排版工具 DocFormatTool · BEST-辣椒</title>
+<link rel="stylesheet" href="style.css">
+<script>var _hmt=_hmt||[];(function(){var hm=document.createElement("script");hm.src="https://hm.baidu.com/hm.js?ac32416394dc05dc67c7585f9a3957f5";var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm,s)})();</script>
+<style>
+  .doc-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:24px 0; }
+  .doc-card { background:var(--bg-alt,#1b1b2a); border:1px solid var(--accent-dim,rgba(255,190,60,.25)); border-radius:10px; padding:18px 16px; }
+  .doc-card h3 { margin:0 0 8px; font-size:17px; color:var(--accent,#ffbe3c); }
+  .doc-card p { margin:0; font-size:14px; line-height:1.6; color:var(--text-dim,#aab); }
+  .doc-compare { margin:28px 0; text-align:center; }
+  .doc-compare img { max-width:100%; border-radius:10px; border:1px solid #333; box-shadow:0 8px 30px rgba(0,0,0,.4); }
+  .doc-compare figcaption { margin-top:8px; font-size:13px; color:var(--text-dim,#aab); }
+  .doc-shots { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:24px 0; }
+  .doc-shot { position:relative; cursor:zoom-in; border-radius:10px; overflow:hidden; border:1px solid #333; }
+  .doc-shot img { width:100%; display:block; transition:transform .3s; }
+  .doc-shot:hover img { transform:scale(1.04); }
+  .doc-shot figcaption { position:absolute; left:0; right:0; bottom:0; padding:6px 10px; font-size:12px;
+      background:linear-gradient(transparent,rgba(0,0,0,.8)); color:#eee; }
+  .doc-lbox { display:none; position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92);
+      align-items:center; justify-content:center; cursor:zoom-out; }
+  .doc-lbox img { max-width:92vw; max-height:90vh; border-radius:8px; }
+  @media (max-width:720px){ .doc-cards,.doc-shots{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand"><span data-i18n="nav-brand">BEST-辣椒</span></a>
+    <div class="nav-links">
+      <a href="about.html" data-i18n="nav-about">关于</a>
+      <a href="bilibili.html" data-i18n="nav-bilibili">B站</a>
+      <a href="worldbuilding.html" data-i18n="nav-worldbuilding">设定集</a>
+      <a href="novel.html" data-i18n="nav-novel">小说</a>
+      <a href="game-design.html" data-i18n="nav-game-design">游戏设计</a>
+      <a href="game-analysis.html" data-i18n="nav-game-analysis">游戏拆解</a>
+      <a href="script-analysis.html" data-i18n="nav-script-analysis">文案拆解</a>
+      <a href="gaming.html" data-i18n="nav-gaming">游戏经历</a>
+      <a href="doc-tool.html" data-i18n="nav-doc-tool">论文工具</a>
+      <a href="wiki/index.html" data-i18n="nav-wiki">百科</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <p data-i18n="xdoc-back"><a href="index.html" class="back-link">&larr; 返回首页</a></p>
+  <h1 data-i18n="doc-hero-h1">论文排版工具 DocFormatTool</h1>
+  <p data-i18n="doc-hero-p">论文格式一键排版 · 自动识别学校模板 · 本地运行不上传</p>
+</div>
+
+<div class="content-section">
+
+  <!-- 功能卡片 -->
+  <div class="doc-cards">
+    <div class="doc-card">
+      <h3 data-i18n="doc-c1t">模板自适应</h3>
+      <p data-i18n="doc-f1">任意学校模板自适应：上传学校模板自动识别格式</p>
+    </div>
+    <div class="doc-card">
+      <h3 data-i18n="doc-c2t">内容零丢失</h3>
+      <p data-i18n="doc-f2">改写式排版：图片/表格/公式原样保留，只规范格式</p>
+    </div>
+    <div class="doc-card">
+      <h3 data-i18n="doc-c3t">Markdown 增强</h3>
+      <p data-i18n="doc-f3">表格、代码块、LaTeX 公式转 Word 原生公式</p>
+    </div>
+    <div class="doc-card">
+      <h3 data-i18n="doc-c4t">自动质检报告</h3>
+      <p data-i18n="doc-f4">排完自动检查，改动报告告诉你改了啥、覆盖率多少</p>
+    </div>
+    <div class="doc-card">
+      <h3 data-i18n="doc-c5t">本地 · 隐私</h3>
+      <p data-i18n="doc-f5">完全本地运行：论文不离开你的电脑，断网也能用</p>
+    </div>
+    <div class="doc-card">
+      <h3 data-i18n="doc-c6t">开源</h3>
+      <p><a href="https://github.com/huojian17-star/DocFormatTool" target="_blank" rel="noopener">github.com/huojian17-star/DocFormatTool</a> · 欢迎 Star 交流</p>
+    </div>
+  </div>
+
+  <!-- 核心对比图 -->
+  <figure class="doc-compare">
+    <img src="doc-tool-compare.webp" alt="排版前后对比" loading="lazy">
+    <figcaption data-i18n="doc-fig1">Markdown 排版前后对比</figcaption>
+  </figure>
+
+  <!-- 截图画廊（点击放大） -->
+  <h2 data-i18n="doc-gallery-h2">界面一览</h2>
+  <div class="doc-shots">
+    <figure class="doc-shot" onclick="openLbox(this)">
+      <img src="doc-tool-ui.webp" alt="软件界面" loading="lazy">
+      <figcaption data-i18n="doc-fig2">软件界面</figcaption>
+    </figure>
+    <figure class="doc-shot" onclick="openLbox(this)">
+      <img src="doc-tool-result.webp" alt="排版结果" loading="lazy">
+      <figcaption data-i18n="doc-fig3">排版后的规范文档</figcaption>
+    </figure>
+    <figure class="doc-shot" onclick="openLbox(this)">
+      <img src="doc-tool-report.webp" alt="改动报告" loading="lazy">
+      <figcaption data-i18n="doc-fig4">排版改动报告</figcaption>
+    </figure>
+  </div>
+
+  <h2 data-i18n="doc-contact-h2">获取与联系</h2>
+  <p data-i18n="doc-contact-p">软件内测中，想试用请私信 B站 @BEST-辣椒 或评论区留言，免费测试。</p>
+
+</div>
+
+<!-- 轻量放大灯箱 -->
+<div class="doc-lbox" id="docLbox" onclick="this.style.display='none'">
+  <img id="docLboxImg" src="" alt="">
+</div>
+<script>
+function openLbox(fig){
+  var img = fig.querySelector('img');
+  document.getElementById('docLboxImg').src = img.src;
+  document.getElementById('docLbox').style.display = 'flex';
+}
+</script>
+</body>
+</html>

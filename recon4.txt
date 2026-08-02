@@ -1,0 +1,6 @@
+﻿fetch 直接 URL: 无字面量（变量拼接）
+FormData 字段: set()
+疑似 API 路径: []
+--- 上下文 ---
+st)(e.tree)},j=(0,R.getDeploymentId)();j&&(T["x-deployment-id"]=j),t&&(T[l.NEXT_URL]=t);let w=await fetch(e.canonicalUrl,{method:"POST",headers:T,body:P});if("1"===w.headers.get(l.NEXT_ACTION_NOT_FOUN
+

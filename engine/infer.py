@@ -11,17 +11,21 @@ type: cover_title | heading1 | heading2 | heading3 | abstract_heading |
 import os
 import re
 
-CN_NUM_RE = re.compile(r"^第\s*[一二三四五六七八九十百千零〇]+\s*[章节篇卷]")
-NUM_H1_RE = re.compile(r"^\d{1,2}\s*[、.．]")
+CN_NUM_RE = re.compile(r"^第\s*[\d一二三四五六七八九十百千零〇]+\s*[章节篇卷]")
+NUM_H1_RE = re.compile(r"^\d{1,2}\s*[、.．](?!\d)")  # 点/顿号后不能跟数字（"4.22" 是日期非标题）
 # Word 自动编号标题："1 引言"（数字+空格+文字）
 NUM_H1_SPACE_RE = re.compile(r"^\d{1,2}\s{1,3}[^\d.．、，,；;:]")
 NUM_H2_RE = re.compile(r"^\d{1,2}[.．]\d{1,2}\s*[、\s]")
 NUM_H3_RE = re.compile(r"^\d{1,2}[.．]\d{1,2}[.．]\d{1,2}\s*[、\s]")
 CN_LIST_RE = re.compile(r"^[一二三四五六七八九十]{1,3}\s*[、.．]")
+PAREN_H1_RE = re.compile(r"^[（(]\s*[\d一二三四五六七八九十]{1,3}\s*[）)]")
 ABSTRACT_RE = re.compile(r"^\s*(摘\s*要)\s*$")
-KEYWORDS_RE = re.compile(r"^\s*关键词\s*[:：]?\s*")
-REF_HEAD_RE = re.compile(r"^\s*参考文献\s*$")
+ABSTRACT_EN_RE = re.compile(r"^\s*(ABSTRACT)\s*$")
+ABSTRACT_EN_INLINE_RE = re.compile(r"^\s*(Abstract|ABSTRACT)\s*[:：]")
+KEYWORDS_RE = re.compile(r"^\s*(关键词|KEY\s*WORDS|Keywords)\s*[:：]?\s*")
+REF_HEAD_RE = re.compile(r"^\s*参考文献\s*[:：]?\s*$")
 REF_ITEM_RE = re.compile(r"^\s*\[\d+\]\s*")
+REF_TYPE_RE = re.compile(r"\[\s*[JMCADPNRT]\s*\]")
 APPENDIX_RE = re.compile(r"^\s*附\s*录\s*$")
 CAPTION_RE = re.compile(r"^\s*[图表]\s*\d{1,2}([-.．]\d{1,2}){0,2}\s*[^\n]{0,60}$")
 IMAGE_MD_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
@@ -160,15 +164,33 @@ def parse_file(path: str):
 _HEADING_MAX_LEN = 60
 # 以句读结尾的句子不判标题（正文句子的特征，宁可漏判不可误判）
 _TERMINAL_PUNCT = "。．.，,；;！？!?、"
+# 标题内容首字若为量词/虚词/动词开头 → 正文（"3 个样本""2.5 元""1.1 节回顾"都是量词/虚词开头）
+_NOT_HEADING_FIRST = set(
+    "个种元次张份名岁倍条段类台套件位项斤公里第节显mz"
+    "了的是在和对从把被将看有进进行为与及或都"
+    "我们你们他们它们这那"
+)
+_HEADING_PREFIX_RE = re.compile(r"^[第\d.．一二三四五六七八九十百千零〇（(]+[章篇卷、:：\s]*")
 
 
 def _is_heading_like(s: str, matched: bool) -> bool:
-    """标题判定：命中编号模式 + 长度上限 + 不以句读结尾。"""
+    """标题判定：命中编号模式 + 长度上限 + 不以句读结尾 + 内容首字非量词/虚词。"""
     if not matched:
         return False
     if len(s) > _HEADING_MAX_LEN:
         return False
     if s[-1] in _TERMINAL_PUNCT:
+        return False
+    # 编号后的内容首字：量词/虚词/代词开头 → 不是标题（如"3 个样本""2.5 元""1.1 节回顾"）
+    body = _HEADING_PREFIX_RE.sub("", s, count=1).lstrip(" ")
+    if body and body[0] in _NOT_HEADING_FIRST:
+        return False
+    # 数字 0 开头 → 小数/统计值，非标题编号（"0.05 显著性""0 个样本"）
+    m = re.match(r"^\s*0", s)
+    if m:
+        return False
+    # "4.22，" 日期+逗号 → 时间轴/叙述，非标题
+    if re.match(r"^\d{1,2}[.．]\d{1,2}[，,]", s):
         return False
     return True
 
@@ -181,13 +203,17 @@ def _classify(s: str, md_mode: bool = False):
         return ("image", s)
 
     # 摘要 / 关键词 / 参考文献 / 附录
-    if ABSTRACT_RE.match(s) or re.match(r"^摘\s*要\s*[:：]", s):
+    if ABSTRACT_RE.match(s) or re.match(r"^摘\s*要\s*[:：]", s) \
+            or ABSTRACT_EN_RE.match(s) or ABSTRACT_EN_INLINE_RE.match(s):
         return ("abstract_heading", s)
     if KEYWORDS_RE.match(s):
         return ("keywords", s)
     if REF_HEAD_RE.match(s):
         return ("ref_heading", s)
     if REF_ITEM_RE.match(s):
+        return ("ref_item", s)
+    if REF_TYPE_RE.search(s) and len(s) <= 100 and re.search(r"[.．]\s*$", s):
+        # 含 [J]/[M] 文献类型标识且以句号结尾 → 参考文献条目（无论有无编号）
         return ("ref_item", s)
     if APPENDIX_RE.match(s):
         return ("appendix", s)
@@ -199,10 +225,11 @@ def _classify(s: str, md_mode: bool = False):
         return ("heading2", s)
     # H1：md 模式排除"数字. "句点式（有序列表）；"数字 空格"式仍判标题
     if md_mode:
-        h1_matched = CN_NUM_RE.match(s) or CN_LIST_RE.match(s) or NUM_H1_SPACE_RE.match(s)
+        h1_matched = (CN_NUM_RE.match(s) or CN_LIST_RE.match(s)
+                      or PAREN_H1_RE.match(s) or NUM_H1_SPACE_RE.match(s))
     else:
-        h1_matched = (CN_NUM_RE.match(s) or NUM_H1_RE.match(s)
-                      or NUM_H1_SPACE_RE.match(s) or CN_LIST_RE.match(s))
+        h1_matched = (CN_NUM_RE.match(s) or NUM_H1_RE.match(s) or NUM_H1_SPACE_RE.match(s)
+                      or CN_LIST_RE.match(s) or PAREN_H1_RE.match(s))
     if _is_heading_like(s, h1_matched):
         return ("heading1", s)
 
@@ -212,9 +239,11 @@ def _classify(s: str, md_mode: bool = False):
         lvl = len(md.group(1))
         return ("heading%d" % lvl, md.group(2))
 
-    # 图/表题注
+    # 图/表题注（内容首字为动词/虚词 → 叙述句非题注："图 1 展示的是…"）
     if CAPTION_RE.match(s) and len(s) <= 70:
-        return ("caption", s)
+        body = re.sub(r"^[图表]\s*\d{1,2}([-.．]\d{1,2}){0,2}\s*", "", s)
+        if body and body[0] not in "展示显示给出表明是的那为见如列出如下":
+            return ("caption", s)
 
     # 封面大标题：整个文档的第一个非空段，且很短
     return ("body", s)
@@ -222,3 +251,21 @@ def _classify(s: str, md_mode: bool = False):
 
 def is_heading(t: str) -> bool:
     return t in ("heading1", "heading2", "heading3")
+
+
+_UNCERTAIN_RE = re.compile(r"^\d{1,2}[.．]\s+\S")
+
+
+def is_uncertain(s: str, md_mode: bool = False) -> bool:
+    """低置信度判定：引擎拿不准的段落（排版前让用户批量确认）。
+
+    当前场景：非 md 模式下"数字. 内容"短行——既可能是标题（"1. 引言"）
+    也可能是列举（"1. 优点：效率高"），引擎默认判标题，但存在误判风险。
+    md 模式下已按有序列表处理，无需确认。
+    """
+    s = (s or "").strip()
+    if md_mode:
+        return False
+    if _UNCERTAIN_RE.match(s) and len(s) <= 40:
+        return True
+    return False

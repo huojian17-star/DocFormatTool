@@ -1,0 +1,9 @@
+﻿==================================================
+chunk: /_next/static/chunks/465f799faf41e6df.js | 大小: 5540
+==================================================
+chunk: /_next/static/chunks/ad0eb8f7a09fbec7.js | 大小: 130895
+  后端 API 调用: ['fetch(']
+  上传/下载: ['FormData']
+==================================================
+chunk: /_next/static/chunks/a6dad97d9634a72d.js | 大小: 112541
+  上传/下载: ['FormData', 'FileReader', 'createObjectURL']
