@@ -1,0 +1,24 @@
+{
+  "school": "中文核心期刊（双栏）",
+  "page": {
+    "paper": "A4",
+    "margins_cm": {"top": 3.0, "bottom": 3.0, "left": 2.5, "right": 2.5},
+    "columns": 2,
+    "column_spacing_cm": 0.6
+  },
+  "fonts": {
+    "body": {"cn": "宋体", "en": "Times New Roman", "size_pt": 10.5},
+    "heading1": {"cn": "黑体", "en": "Times New Roman", "size_pt": 12, "bold": true},
+    "heading2": {"cn": "黑体", "en": "Times New Roman", "size_pt": 10.5, "bold": true},
+    "heading3": {"cn": "黑体", "en": "Times New Roman", "size_pt": 10.5, "bold": true},
+    "caption": {"cn": "宋体", "en": "Times New Roman", "size_pt": 9},
+    "header": {"cn": "宋体", "en": "Times New Roman", "size_pt": 9},
+    "ref": {"cn": "宋体", "en": "Times New Roman", "size_pt": 9}
+  },
+  "paragraph": {"line_spacing": 1.25, "first_line_indent_chars": 2, "align": "justify"},
+  "cover": {"enabled": false},
+  "abstract": {"heading_text": "摘要", "keywords_label": "关键词：", "keywords_sep": "；"},
+  "references": {"heading_text": "参考文献", "style": "GB/T 7714"},
+  "captions": {"figure": "图{chapter}-{num}", "table": "表{chapter}-{num}"},
+  "headings": {"numbering": false}
+}
