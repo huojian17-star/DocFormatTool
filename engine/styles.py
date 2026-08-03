@@ -17,7 +17,11 @@ def iter_runs(par):
 
 
 def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None):
-    """同时设置中文字体（eastAsia）与西文字体。"""
+    """同时设置中文字体（eastAsia）与西文字体，并清除字符间距（w:spacing）。
+
+    输入文档常见"两端对齐 + 手动加宽字符间距"的排版习惯，间距保留会导致
+    每行字数骤减、视觉松散。中文正文/标题默认间距 0，统一清除。
+    """
     run.font.name = en_font
     rpr = run._element.get_or_add_rPr()
     rfonts = rpr.find(qn("w:rFonts"))
@@ -28,6 +32,9 @@ def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None):
     rfonts.set(qn("w:ascii"), en_font)
     rfonts.set(qn("w:hAnsi"), en_font)
     rfonts.set(qn("w:eastAsia"), cn_font)
+    sp = rpr.find(qn("w:spacing"))
+    if sp is not None:
+        rpr.remove(sp)
     run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold
