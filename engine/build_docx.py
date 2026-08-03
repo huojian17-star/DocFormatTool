@@ -110,6 +110,7 @@ def _reformat_existing_core(cfg: dict, src: str, dst: str) -> dict:
     _setup_page(doc, cfg)
     _setup_columns(doc, cfg)
     _apply_page_numbering(doc, cfg)
+    _ensure_heading_styles(doc)
 
     # 目录：文档原无目录且模板开启 → 在正文首标题前插入
     toc_action = "未启用/未检测到"
@@ -236,6 +237,77 @@ def _set_pstyle(p_el, style_id: str):
     ps.set(qn("w:val"), style_id)
 
 
+def _ensure_heading_styles(doc):
+    """确保文档 styles.xml 含 Heading1/2/3 样式定义（否则 pStyle 引用无效，样式集/导航窗格不显示）。
+
+    用户自己的文档常不带这些内置样式；插入标准定义（样式 id 与
+    python-docx/_set_pstyle 使用的 'Heading1/2/3' 一致），并给黑体黑色
+    加粗（run 级格式会覆盖，样式仅作"挂载点"）。
+    """
+    styles_el = doc.styles.element
+    existing = set()
+    for s in styles_el.findall(qn("w:style")):
+        sid = s.get(qn("w:styleId"))
+        if sid:
+            existing.add(sid)
+        nm = s.find(qn("w:name"))
+        if nm is not None and nm.get(qn("w:val")):
+            existing.add(nm.get(qn("w:val")))
+    for sid, name, lvl in (("Heading1", "heading 1", "0"),
+                           ("Heading2", "heading 2", "1"),
+                           ("Heading3", "heading 3", "2")):
+        # 已存在的 Heading 样式：补 qFormat（样式窗格显示）与黑色（防蓝色标题），不改动其余
+        matched = None
+        for s in styles_el.findall(qn("w:style")):
+            if s.get(qn("w:styleId")) == sid:
+                matched = s
+                break
+        if matched is not None:
+            _upgrade_heading_style(matched)
+            continue
+        st = OxmlElement("w:style")
+        st.set(qn("w:type"), "paragraph")
+        st.set(qn("w:styleId"), sid)
+        nm_el = OxmlElement("w:name")
+        nm_el.set(qn("w:val"), name)
+        st.append(nm_el)
+        qf = OxmlElement("w:qFormat")
+        st.append(qf)
+        pPr = OxmlElement("w:pPr")
+        keepn = OxmlElement("w:keepNext")
+        pPr.append(keepn)
+        ol = OxmlElement("w:outlineLvl")
+        ol.set(qn("w:val"), lvl)
+        pPr.append(ol)
+        st.append(pPr)
+        rPr = OxmlElement("w:rPr")
+        b = OxmlElement("w:b")
+        rPr.append(b)
+        col = OxmlElement("w:color")
+        col.set(qn("w:val"), "000000")
+        rPr.append(col)
+        st.append(rPr)
+        styles_el.append(st)
+
+
+def _upgrade_heading_style(st_el):
+    """对已存在的 Heading 样式补 qFormat（样式窗格显示）与黑色粗体（run 级格式会覆盖，仅兜底）。"""
+    qf = st_el.find(qn("w:qFormat"))
+    if qf is None:
+        st_el.append(OxmlElement("w:qFormat"))
+    rPr = st_el.find(qn("w:rPr"))
+    if rPr is None:
+        rPr = OxmlElement("w:rPr")
+        st_el.append(rPr)
+    if rPr.find(qn("w:b")) is None:
+        rPr.insert(0, OxmlElement("w:b"))
+    col = rPr.find(qn("w:color"))
+    if col is None:
+        col = OxmlElement("w:color")
+        rPr.append(col)
+    col.set(qn("w:val"), "000000")
+
+
 def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
     """统一处理一个段落（顶层正文/标题/表格内/文本框内）。
 
@@ -337,6 +409,27 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         for r in p_el.iter(qn("w:r")):
             S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"], bold=True)
+    elif t == "keywords":
+        # 关键词行：标签（关键词：/Keywords:/Index Terms—/CCS Concepts •）黑体加粗，内容正文
+        kw_fd = cfg["fonts"].get("keywords", cfg["fonts"].get("abstract_heading", cfg["fonts"]["heading1"]))
+        bd_fd = cfg["fonts"]["body"]
+        p.paragraph_format.line_spacing = par_ls(cfg)
+        p.paragraph_format.first_line_indent = Cm(0)
+        full = para_text(p_el)
+        m = re.match(r"^(.{1,20}?[：:—•]\s*)", full)
+        label_len = len(m.group(1)) if m else 0
+        acc = 0
+        for r in p_el.iter(qn("w:r")):
+            t_el = r.find(qn("w:t"))
+            if t_el is None or not t_el.text:
+                continue
+            ln = len(t_el.text)
+            if acc + ln <= label_len:
+                S._set_run_font(Run(r, p), kw_fd["cn"], kw_fd["en"], kw_fd["size_pt"], bold=True)
+            else:
+                S._set_run_font(Run(r, p), bd_fd["cn"], bd_fd["en"], bd_fd["size_pt"])
+            acc += ln
+            st["runs_set"] = st.get("runs_set", 0) + 1
     elif t in ("ref_heading", "appendix"):
         S.format_heading(p, cfg, 1)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -360,6 +453,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
         h_lvl = _guess_heading_by_format(p, cfg, text)
         if h_lvl:
             S.format_heading(p, cfg, h_lvl)
+            _set_pstyle(p_el, {1: "Heading1", 2: "Heading2", 3: "Heading3"}[h_lvl])
             st["h%d" % h_lvl] = st.get("h%d" % h_lvl, 0) + 1
         else:
             # 正文：规范化字体、行距、首行缩进
@@ -706,8 +800,7 @@ def _apply_body(doc, cfg, structs, base_dir):
         elif t == "abstract_heading":
             _add_para(doc, cfg, cfg["abstract"].get("heading_text", "摘  要"), "abs_heading", center=True)
         elif t == "keywords":
-            label = cfg["abstract"].get("keywords_label", "关键词：")
-            _add_para(doc, cfg, label + text if not text.startswith(label) else text, "body")
+            _add_para(doc, cfg, text, "keywords")
         elif t == "appendix":
             _add_para(doc, cfg, text, "heading1")
         elif t == "caption":
@@ -742,6 +835,18 @@ def _add_para(doc, cfg, text, kind, center=False):
         if center:
             pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _add_inline_runs(p, cfg, text, fd, bold=fd.get("bold", True))
+    elif kind == "keywords":
+        # 关键词行：标签黑体加粗 + 内容正文
+        fd = f.get("keywords", f.get("abstract_heading", f["heading1"]))
+        bd = f["body"]
+        pf.line_spacing = par_ls(cfg)
+        m = re.match(r"^(.{1,20}?[：:—•]\s*)", text)
+        label = m.group(1) if m else ""
+        rest = text[len(label):]
+        r1 = p.add_run(label)
+        S._set_run_font(r1, fd["cn"], fd["en"], fd["size_pt"], bold=True)
+        r2 = p.add_run(rest)
+        S._set_run_font(r2, bd["cn"], bd["en"], bd["size_pt"])
     elif kind == "heading2":
         fd = f["heading2"]
         pf.line_spacing = par_ls(cfg)

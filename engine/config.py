@@ -19,7 +19,8 @@ DEFAULT = {
         # 中文字体名（eastAsia）与西文字体名
         "body": {"cn": "宋体", "en": "Times New Roman", "size_pt": 12},
         "doc_title": {"cn": "黑体", "en": "Times New Roman", "size_pt": 18, "bold": True},
-        "abstract_heading": {"cn": "黑体", "en": "Times New Roman", "size_pt": 14, "bold": True},
+        "abstract_heading": {"cn": "黑体", "en": "Times New Roman", "size_pt": 16, "bold": True},
+        "keywords": {"cn": "黑体", "en": "Times New Roman", "size_pt": 12, "bold": True},
         "heading1": {"cn": "黑体", "en": "Times New Roman", "size_pt": 16, "bold": True},
         "heading2": {"cn": "黑体", "en": "Times New Roman", "size_pt": 14, "bold": True},
         "heading3": {"cn": "黑体", "en": "Times New Roman", "size_pt": 12, "bold": True},

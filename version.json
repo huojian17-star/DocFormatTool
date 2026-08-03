@@ -1,5 +1,5 @@
-{
-  "version": "1.0.3",
-  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.3/DocFormatTool.exe",
-  "note": "界面改为清爽浅色办公主题（白底+学术蓝），主按钮蓝色高亮，整体更干净专业"
+﻿{
+  "version": "1.0.4",
+  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.4/DocFormatTool.exe",
+  "note": "内置模板全面对照官方规范修正（学位论文摘要标题三号、期刊/英文模板字号）；每个模板新增参考来源说明；关键词行标签黑体加粗+内容正文"
 }
