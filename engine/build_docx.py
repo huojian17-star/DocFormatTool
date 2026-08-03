@@ -372,6 +372,11 @@ def _upgrade_heading_style(st_el):
         col = OxmlElement("w:color")
         rPr.append(col)
     col.set(qn("w:val"), "000000")
+    # 关键：删除 themeColor/themeTint/themeShade——Word/WPS 渲染优先主题色（accent1 默认蓝），
+    # 输入文档的 Heading 样式常带 themeColor=accent1，只设 val 不删它仍是蓝色
+    for attr in ("w:themeColor", "w:themeTint", "w:themeShade"):
+        if col.get(qn(attr)) is not None:
+            del col.attrib[qn(attr)]
 
 
 def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, next_text=""):
