@@ -128,9 +128,18 @@ def _reformat_existing_core(cfg: dict, src: str, dst: str) -> dict:
     in_toc = False
     # 先快照段落列表再遍历：处理中会修改文档（插分节符/设样式），
     # lxml iter 在遍历中修改树会导致生成器跳变（目录区条目漏处理）
-    for p_el in list(doc.element.body.iter(qn("w:p"))):
+    paras = list(doc.element.body.iter(qn("w:p")))
+    for idx, p_el in enumerate(paras):
         stats["paras_total"] += 1
-        in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc)
+        # 前瞻下一段文本（目录区结束判定需要：正文标题后是长正文，目录条目后是短条目）。
+        # 跳过空段——正文标题后常有空行，空段不能作为"非长正文"信号。
+        next_text = ""
+        for j in range(idx + 1, len(paras)):
+            nt = para_text(paras[j]).strip()
+            if nt:
+                next_text = nt
+                break
+        in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc, next_text)
 
     doc.save(dst)
     stats["out"] = dst
@@ -365,7 +374,7 @@ def _upgrade_heading_style(st_el):
     col.set(qn("w:val"), "000000")
 
 
-def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
+def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, next_text=""):
     """统一处理一个段落（顶层正文/标题/表格内/文本框内）。
 
     含图片/公式的段落原样保留仅居中；其余按文本特征套角色格式。
@@ -418,19 +427,22 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
         if not text:
             return False, True  # 空段：保持目录区（分节符等插入的空段不能中断目录）
         typ_t, _ = infer._classify(text)
-        if typ_t in ("ref_heading", "appendix"):
-            # 目录收尾条目（参考文献/致谢/附录）：统一正文格式后退出目录区
-            S.format_body(p, cfg)
-            _clear_paragraph_indent(p_el)  # 目录条目不缩进（清 firstLineChars/left 残留）
-            st["paras"] = st.get("paras", 0) + 1
-            return False, False
-        if typ_t in ("heading1", "heading2", "heading3"):
-            # 目录条目（标题模式的短行）：按正文格式处理，不套标题
+        # 正文标题特征：短行标题 + 下一条是长正文（>40 字）或更低层级子标题（H1 后跟 1.1）→ 目录区结束
+        nt_type, _ = infer._classify(next_text) if next_text else ("", "")
+        is_body_heading = (typ_t in ("heading1", "heading2", "heading3")
+                           and (len(next_text) > 40
+                                or (typ_t == "heading1" and nt_type in ("heading2", "heading3"))))
+        if is_body_heading:
+            _in_toc = False
+            # 不 return，落到下方正常标题处理
+        elif len(text) <= 40:
+            # 目录条目（短行：章节/参考文献/致谢/附录）：按正文格式，不套标题
             S.format_body(p, cfg)
             _clear_paragraph_indent(p_el)  # 目录条目不缩进（清 firstLineChars/left 残留）
             st["paras"] = st.get("paras", 0) + 1
             return False, True
-        return False, False  # 非目录条目（正文内容）出现，目录区结束
+        else:
+            return False, False  # 长正文出现，目录区结束
 
     # 表格内段落：统一表格字体（表格里不判标题，防止"1. xxx"列举被当标题）
     if _in_table(p_el):
