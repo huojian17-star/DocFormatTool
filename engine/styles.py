@@ -99,9 +99,15 @@ def format_heading(par, cfg, level: int):
 
 
 def format_body(par, cfg):
-    """套用正文格式：字体 + 行距 + 首行缩进 2 字符。正文统一不加粗、不加斜体、默认清除颜色。"""
+    """套用正文格式：字体 + 行距 + 首行缩进 2 字符。正文统一不加粗、不加斜体、默认清除颜色。
+
+    同时清 left/right 缩进——输入文档常把列举/分类段带左缩进，保留会缩进参差。
+    """
     f = cfg["fonts"]["body"]
     set_paragraph_format(par, cfg["paragraph"])
+    pf = par.paragraph_format
+    pf.left_indent = Cm(0)
+    pf.right_indent = Cm(0)
     for run in iter_runs(par):
         _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=False, italic=False,
                       clear_color=not cfg.get("preserve_colors", False))
