@@ -16,12 +16,24 @@ def iter_runs(par):
         yield Run(r, par)
 
 
-def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_color=True, clear_italic=True):
+def _is_underline_fill(run):
+    """下划线填空判定：纯空格（\u00a0/普通空格）或全为下划线字符（___）。
+
+    封面/表单的"姓名：____"、"签字：___"等填空下划线是文档结构的一部分，
+    不能被当网页复制残留清除。
+    """
+    stripped = run.text.strip()
+    return len(stripped) == 0 or set(stripped) == {"_"}
+
+
+def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_color=True, clear_italic=True, strip_underline=None):
     """同时设置中文字体（eastAsia）与西文字体，清除字符间距，默认清除颜色与斜体。
 
     输入文档常见"两端对齐 + 手动加宽字符间距 + 彩色强调/部分加粗/个别斜体"的排版习惯，
     保留会导致每行字数骤减、颜色花哨、加粗/斜体不统一。
     clear_color=False / clear_italic=False 时保留原文（高级选项开关）。
+    strip_underline：True=强制清除下划线（参考文献区域）；False=保留原文下划线；
+    None（默认）=启发式——纯空格/___ 填空下划线保留，普通文本下划线（网页复制残留）清除。
     """
     run.font.name = en_font
     rpr = run._element.get_or_add_rPr()
@@ -42,8 +54,11 @@ def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_
             rpr.remove(col)
     u = rpr.find(qn("w:u"))
     if u is not None:
-        # 下划线多为从网页/富文本复制残留，参考文献与正文规范均不需要，强制清除
-        rpr.remove(u)
+        if strip_underline is True:
+            rpr.remove(u)  # 参考文献区域：100% 擦除（学术规范）
+        elif strip_underline is None and not _is_underline_fill(run):
+            rpr.remove(u)  # 正文：网页复制残留清掉，填空下划线（空格/___）保留
+        # strip_underline=False → 原样保留
     run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold

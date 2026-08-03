@@ -530,7 +530,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         keep_italic = cfg.get("preserve_italic", False)
         for r in p_el.iter(qn("w:r")):
             S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"], bold=False,
-                            italic=None if keep_italic else False)
+                            italic=None if keep_italic else False, strip_underline=True)
             st["runs_set"] = st.get("runs_set", 0) + 1
     elif t == "caption":
         fd = cfg["fonts"]["caption"]
