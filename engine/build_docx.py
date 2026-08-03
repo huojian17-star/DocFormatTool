@@ -520,9 +520,13 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         pf = p.paragraph_format
         pf.line_spacing = par_ls(cfg)
         # GB/T 7714 悬挂缩进：编号顶格，续行缩进（条目跨页时不切断、视觉整齐）
+        _clear_paragraph_indent(p_el)  # 先清输入缩进残留（firstLineChars/left），否则 WPS 优先 firstLineChars
         pf.left_indent = Cm(0.74)
         pf.first_line_indent = Cm(-0.74)
         pf.keep_together = True  # 段内不跨页断开（整条移下一页）
+        pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY  # 统一两端对齐（输入可能是居中/左对齐残留）
+        pf.space_before = Pt(0)  # 清输入段前段后残留
+        pf.space_after = Pt(0)
         for r in p_el.iter(qn("w:r")):
             S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"])
             st["runs_set"] = st.get("runs_set", 0) + 1
