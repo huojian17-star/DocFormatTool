@@ -94,7 +94,13 @@ def _call_minimax(path: str, question: str, detail: str = "default") -> str:
     )
     with urllib.request.urlopen(req, timeout=120) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-    return data["choices"][0]["message"]["content"]
+    content = data["choices"][0]["message"]["content"]
+    # MiniMax-M3 等模型会输出 <think>...</think> 思考前缀，剥离后返回干净结论
+    if content.startswith("<think>"):
+        end = content.find("</think>")
+        if end != -1:
+            content = content[end + len("</think>"):].strip()
+    return content
 
 
 def _handle(method: str, params: dict):
