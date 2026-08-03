@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
-  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.4/DocFormatTool.exe",
-  "note": "内置模板全面对照官方规范修正（学位论文摘要标题三号、期刊/英文模板字号）；每个模板新增参考来源说明；关键词行标签黑体加粗+内容正文"
+  "version": "1.0.5",
+  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.5/DocFormatTool.exe",
+  "note": "参考文献 OpenXML 规范化：强制左对齐防短条目字距拉伸、清除下划线/加粗残留、悬挂缩进；下划线上下文清洗（封面/表单填空下划线智能保留）；标题主题色统一黑色；新增保留原文颜色/斜体开关"
 }
