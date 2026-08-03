@@ -126,7 +126,9 @@ def _reformat_existing_core(cfg: dict, src: str, dst: str) -> dict:
 
     in_cover = True
     in_toc = False
-    for p_el in doc.element.body.iter(qn("w:p")):
+    # 先快照段落列表再遍历：处理中会修改文档（插分节符/设样式），
+    # lxml iter 在遍历中修改树会导致生成器跳变（目录区条目漏处理）
+    for p_el in list(doc.element.body.iter(qn("w:p"))):
         stats["paras_total"] += 1
         in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc)
 
@@ -196,6 +198,9 @@ def _guess_heading_by_format(p, cfg, text):
     返回标题层级 1/2/3，非标题返回 0。保守判定，宁可漏判不可误判。
     """
     if len(text) > 40:
+        return 0
+    # 以句读结尾 → 叙述句，非标题（标题不以。！？；结尾）
+    if text and text[-1] in "。！？；!?;":
         return 0
     body_size = cfg["fonts"]["body"]["size_pt"]
     sizes, bolds = [], []
@@ -358,13 +363,19 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
         st["paras"] = st.get("paras", 0) + 1
         return False, True
     if _in_toc:
-        if text:
-            typ_t, _ = infer._classify(text)
-            if typ_t in ("heading1", "heading2", "heading3"):
-                # 目录条目（标题模式的短行）：按正文格式处理，不套标题
-                S.format_body(p, cfg)
-                st["paras"] = st.get("paras", 0) + 1
-                return False, True
+        if not text:
+            return False, True  # 空段：保持目录区（分节符等插入的空段不能中断目录）
+        typ_t, _ = infer._classify(text)
+        if typ_t in ("ref_heading", "appendix"):
+            # 目录收尾条目（参考文献/致谢/附录）：统一正文格式后退出目录区
+            S.format_body(p, cfg)
+            st["paras"] = st.get("paras", 0) + 1
+            return False, False
+        if typ_t in ("heading1", "heading2", "heading3"):
+            # 目录条目（标题模式的短行）：按正文格式处理，不套标题
+            S.format_body(p, cfg)
+            st["paras"] = st.get("paras", 0) + 1
+            return False, True
         return False, False  # 非目录条目（正文内容）出现，目录区结束
 
     # 表格内段落：统一表格字体（表格里不判标题，防止"1. xxx"列举被当标题）

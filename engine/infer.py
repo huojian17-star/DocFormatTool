@@ -20,13 +20,14 @@ NUM_H3_RE = re.compile(r"^\d{1,2}[.．]\d{1,2}[.．]\d{1,2}\s*[、\s]")
 CN_LIST_RE = re.compile(r"^[一二三四五六七八九十]{1,3}\s*[、.．]")
 PAREN_H1_RE = re.compile(r"^[（(]\s*[\d一二三四五六七八九十]{1,3}\s*[）)]")
 ABSTRACT_RE = re.compile(r"^\s*(摘\s*要)\s*$")
-ABSTRACT_EN_RE = re.compile(r"^\s*(ABSTRACT)\s*$")
+ABSTRACT_EN_RE = re.compile(r"^\s*(Abstract|ABSTRACT)\s*$")
 ABSTRACT_EN_INLINE_RE = re.compile(r"^\s*(Abstract|ABSTRACT)\s*[:：]")
 KEYWORDS_RE = re.compile(r"^\s*(关键词|KEY\s*WORDS|Keywords)\s*[:：]?\s*")
 REF_HEAD_RE = re.compile(r"^\s*参考文献\s*[:：]?\s*$")
 REF_ITEM_RE = re.compile(r"^\s*\[\d+\]\s*")
 REF_TYPE_RE = re.compile(r"\[\s*[JMCADPNRT]\s*\]")
 APPENDIX_RE = re.compile(r"^\s*附\s*录\s*$")
+THANKS_RE = re.compile(r"^\s*致\s*谢\s*$")
 CAPTION_RE = re.compile(r"^\s*[图表]\s*\d{1,2}([-.．]\d{1,2}){0,2}\s*[^\n]{0,60}$")
 IMAGE_MD_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 
@@ -173,8 +174,12 @@ _NOT_HEADING_FIRST = set(
 _HEADING_PREFIX_RE = re.compile(r"^[第\d.．一二三四五六七八九十百千零〇（(]+[章篇卷、:：\s]*")
 
 
-def _is_heading_like(s: str, matched: bool) -> bool:
-    """标题判定：命中编号模式 + 长度上限 + 不以句读结尾 + 内容首字非量词/虚词。"""
+def _is_heading_like(s: str, matched: bool, dotted: bool = False) -> bool:
+    """标题判定：命中编号模式 + 长度上限 + 不以句读结尾 + 内容首字非量词/虚词。
+
+    dotted=True（点式编号 x.y / x.y.z）：跳过首字量词检查——
+    避免误伤"2.1.4 个性化学习"（"个"是量词字，误判为列举）。
+    """
     if not matched:
         return False
     if len(s) > _HEADING_MAX_LEN:
@@ -183,7 +188,7 @@ def _is_heading_like(s: str, matched: bool) -> bool:
         return False
     # 编号后的内容首字：量词/虚词/代词开头 → 不是标题（如"3 个样本""2.5 元""1.1 节回顾"）
     body = _HEADING_PREFIX_RE.sub("", s, count=1).lstrip(" ")
-    if body and body[0] in _NOT_HEADING_FIRST:
+    if body and body[0] in _NOT_HEADING_FIRST and not dotted:
         return False
     # 数字 0 开头 → 小数/统计值，非标题编号（"0.05 显著性""0 个样本"）
     m = re.match(r"^\s*0", s)
@@ -215,13 +220,13 @@ def _classify(s: str, md_mode: bool = False):
     if REF_TYPE_RE.search(s) and len(s) <= 100 and re.search(r"[.．]\s*$", s):
         # 含 [J]/[M] 文献类型标识且以句号结尾 → 参考文献条目（无论有无编号）
         return ("ref_item", s)
-    if APPENDIX_RE.match(s):
+    if APPENDIX_RE.match(s) or THANKS_RE.match(s):
         return ("appendix", s)
 
     # 标题层级：先三级再二级再一级（保守判定：编号 + 短行 + 不以句读结尾）
-    if _is_heading_like(s, NUM_H3_RE.match(s)):
+    if _is_heading_like(s, NUM_H3_RE.match(s), dotted=True):
         return ("heading3", s)
-    if _is_heading_like(s, NUM_H2_RE.match(s)):
+    if _is_heading_like(s, NUM_H2_RE.match(s), dotted=True):
         return ("heading2", s)
     # H1：md 模式排除"数字. "句点式（有序列表）；"数字 空格"式仍判标题
     if md_mode:
