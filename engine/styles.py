@@ -16,11 +16,12 @@ def iter_runs(par):
         yield Run(r, par)
 
 
-def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None):
-    """同时设置中文字体（eastAsia）与西文字体，并清除字符间距（w:spacing）。
+def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_color=True):
+    """同时设置中文字体（eastAsia）与西文字体，清除字符间距，默认清除文字颜色。
 
-    输入文档常见"两端对齐 + 手动加宽字符间距"的排版习惯，间距保留会导致
-    每行字数骤减、视觉松散。中文正文/标题默认间距 0，统一清除。
+    输入文档常见"两端对齐 + 手动加宽字符间距 + 彩色强调/部分加粗"的排版习惯，
+    保留会导致每行字数骤减、颜色花哨、加粗不统一。中文论文默认黑色不加粗。
+    clear_color=False 时保留原文颜色（高级选项"保留原文文字颜色"）。
     """
     run.font.name = en_font
     rpr = run._element.get_or_add_rPr()
@@ -35,6 +36,10 @@ def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None):
     sp = rpr.find(qn("w:spacing"))
     if sp is not None:
         rpr.remove(sp)
+    if clear_color:
+        col = rpr.find(qn("w:color"))
+        if col is not None:
+            rpr.remove(col)
     run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold
@@ -78,19 +83,22 @@ def format_heading(par, cfg, level: int):
     pf.space_before = Pt(6 if level == 1 else 3)
     pf.space_after = Pt(6 if level == 1 else 3)
     for run in iter_runs(par):
-        _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=f.get("bold", True))
+        _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=f.get("bold", True), italic=False,
+                      clear_color=not cfg.get("preserve_colors", False))
     # 空 run（无文字）也建一个以便样式生效
     if not par.runs:
         run = par.add_run(par.text or "")
-        _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=f.get("bold", True))
+        _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=f.get("bold", True), italic=False,
+                      clear_color=not cfg.get("preserve_colors", False))
 
 
 def format_body(par, cfg):
-    """套用正文格式：字体 + 行距 + 首行缩进 2 字符。"""
+    """套用正文格式：字体 + 行距 + 首行缩进 2 字符。正文统一不加粗、不加斜体、默认清除颜色。"""
     f = cfg["fonts"]["body"]
     set_paragraph_format(par, cfg["paragraph"])
     for run in iter_runs(par):
-        _set_run_font(run, f["cn"], f["en"], f["size_pt"])
+        _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=False, italic=False,
+                      clear_color=not cfg.get("preserve_colors", False))
     chars = cfg["paragraph"].get("first_line_indent_chars", 2)
     if chars:
         set_first_line_indent(par, chars)

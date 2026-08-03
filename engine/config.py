@@ -35,6 +35,8 @@ DEFAULT = {
         "space_after_pt": 0,
         "align": "justify",             # justify | left
     },
+    # 是否保留原文文字颜色（默认 False=统一黑色；True 保留彩色强调）
+    "preserve_colors": False,
     # 草稿模板中的样式名 -> 含义（模板制，样式键固定）
     "styles": {
         "instructions": "使用说明",        # 模板第一页的使用说明，输出时整段删除
