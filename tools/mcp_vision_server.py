@@ -13,8 +13,34 @@ import sys
 import urllib.request
 
 API_HOST = os.environ.get("MINIMAX_API_HOST", "https://api.minimaxi.com").rstrip("/")
-API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 MODEL = os.environ.get("MINIMAX_VISION_MODEL", "MiniMax-M3")
+
+
+def _get_api_key():
+    """取 MINIMAX_API_KEY：先进程环境，再 Windows User 级环境变量（注册表）。
+
+    宿主进程（Reasonix）可能早于用户设置环境变量启动，${MINIMAX_API_KEY}
+    展开为空——server 直接读注册表 User 级变量兜底，无需重启宿主。
+    """
+    key = os.environ.get("MINIMAX_API_KEY", "").strip()
+    if key and not key.startswith("${"):
+        return key
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment") as k:
+            v, _ = winreg.QueryValueEx(k, "MINIMAX_API_KEY")
+            if v:
+                return str(v).strip()
+    except Exception:
+        pass
+    return ""
+
+
+API_KEY = _get_api_key()
+import sys as _sys
+print("[minimax-vision] key=%s host=%s model=%s" % (
+    ("已设置(%d字符)" % len(API_KEY)) if API_KEY else "缺失!",
+    API_HOST, MODEL), file=_sys.stderr, flush=True)
 
 TOOL_DEF = {
     "name": "see_image",
