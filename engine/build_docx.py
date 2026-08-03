@@ -281,6 +281,19 @@ def _set_pstyle(p_el, style_id: str):
     ps.set(qn("w:val"), style_id)
 
 
+def _clear_paragraph_indent(p_el):
+    """彻底清除段落缩进（删除整个 w:ind，含 firstLineChars/left 等全部残留）。
+
+    python-docx 的 first_line_indent=Cm(0) 只改 w:firstLine，
+    firstLineChars/left 可能残留（WPS/Word 优先 firstLineChars → 缩进仍在）。
+    """
+    pPr = p_el.find(qn("w:pPr"))
+    if pPr is not None:
+        ind = pPr.find(qn("w:ind"))
+        if ind is not None:
+            pPr.remove(ind)
+
+
 def _ensure_heading_styles(doc):
     """确保文档 styles.xml 含 Heading1/2/3 样式定义（否则 pStyle 引用无效，样式集/导航窗格不显示）。
 
@@ -408,11 +421,13 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
         if typ_t in ("ref_heading", "appendix"):
             # 目录收尾条目（参考文献/致谢/附录）：统一正文格式后退出目录区
             S.format_body(p, cfg)
+            _clear_paragraph_indent(p_el)  # 目录条目不缩进（清 firstLineChars/left 残留）
             st["paras"] = st.get("paras", 0) + 1
             return False, False
         if typ_t in ("heading1", "heading2", "heading3"):
             # 目录条目（标题模式的短行）：按正文格式处理，不套标题
             S.format_body(p, cfg)
+            _clear_paragraph_indent(p_el)  # 目录条目不缩进（清 firstLineChars/left 残留）
             st["paras"] = st.get("paras", 0) + 1
             return False, True
         return False, False  # 非目录条目（正文内容）出现，目录区结束

@@ -43,8 +43,11 @@ def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_
     run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold
-    if italic is not None:
-        run.font.italic = italic
+    # 斜体：默认清除（输入文档常有个别 run 斜体残留）；显式 italic=True 才保留
+    if italic is None:
+        run.font.italic = False
+    else:
+        run.font.italic = bool(italic)
 
 
 def set_paragraph_format(par, cfg_par):
@@ -75,13 +78,16 @@ def set_first_line_indent(par, chars: int):
 
 
 def format_heading(par, cfg, level: int):
-    """套用标题格式（level 1/2/3）。"""
+    """套用标题格式（level 1/2/3），标题顶格（清输入参差的缩进）。"""
     f = cfg["fonts"]["heading%d" % level]
     set_paragraph_format(par, cfg["paragraph"])
     par.paragraph_format.line_spacing = cfg["paragraph"].get("line_spacing", 1.5)
     pf = par.paragraph_format
     pf.space_before = Pt(6 if level == 1 else 3)
     pf.space_after = Pt(6 if level == 1 else 3)
+    pf.first_line_indent = Cm(0)  # 标题顶格，清输入缩进
+    pf.left_indent = Cm(0)
+    pf.right_indent = Cm(0)
     for run in iter_runs(par):
         _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=f.get("bold", True), italic=False,
                       clear_color=not cfg.get("preserve_colors", False))
