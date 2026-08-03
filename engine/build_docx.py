@@ -180,16 +180,55 @@ def _set_run_font_name(run, cn_font, en_font):
     rfonts.set(qn("w:eastAsia"), cn_font)
 
 
-def _format_cover_para(p_el, cfg, text):
+def _format_cover_para(p_el, cfg, text, stats=None):
     """封面段安全统一：只改字体名，布局/字号/对齐全部保持原样。
+
+    例外：封面题目若字号爆炸（>模板题目字号+6pt），规范为模板题目字号并居中
+    ——输入文档的题目常被作者放大到 60pt+，保留会拆行撑满页面。
 
     封面千奇百怪（表格布局/段落布局/校徽/字段各异），强行识别排版必然误伤，
     这里只做零风险的字体统一，其余交给学校自己的封面模板。
     """
     from docx.text.run import Run
+    from docx.text.paragraph import Paragraph
     fd = cfg["fonts"]["body"]
+    sizes = []
     for r in p_el.iter(qn("w:r")):
-        _set_run_font_name(Run(r, None), fd["cn"], fd["en"])
+        rpr = r.find(qn("w:rPr"))
+        if rpr is not None:
+            sz = rpr.find(qn("w:sz"))
+            if sz is not None:
+                sizes.append(int(sz.get(qn("w:val"))) / 2)
+    title_size = cfg.get("cover", {}).get("title_size_pt", 22)
+    exclude = ("毕业论文", "学位论文", "学院", "大学", "学校", "学号", "专业",
+               "姓名", "指导", "完成日期", "目录", "摘要", "Abstract", "论文题目")
+    max_size = max(sizes, default=0)
+    is_title = (5 <= len(text) <= 40 and max_size > title_size + 6
+                and not any(k in text for k in exclude))
+    if is_title:
+        p = Paragraph(p_el, None)
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # 清缩进（输入超大字号时可能带了缩进，22pt 下会拆行）+ 控制段距
+        pf = p.paragraph_format
+        pf.left_indent = Cm(0)
+        pf.right_indent = Cm(0)
+        pf.first_line_indent = Cm(0)
+        pf.space_before = Pt(12)
+        pf.space_after = Pt(12)
+        tfd = cfg["fonts"].get("doc_title", cfg["fonts"]["heading1"])
+        for r in p_el.iter(qn("w:r")):
+            # 清字符间距（输入超大字号时可能加了 w:spacing，22pt 下会撑宽拆行）
+            rpr = r.find(qn("w:rPr"))
+            if rpr is not None:
+                sp = rpr.find(qn("w:spacing"))
+                if sp is not None:
+                    rpr.remove(sp)
+            S._set_run_font(Run(r, p), tfd["cn"], tfd["en"], title_size, bold=True)
+        if stats is not None:
+            stats["runs_set"] = stats.get("runs_set", 0) + 1
+    else:
+        for r in p_el.iter(qn("w:r")):
+            _set_run_font_name(Run(r, None), fd["cn"], fd["en"])
 
 
 def _guess_heading_by_format(p, cfg, text):
@@ -346,7 +385,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False):
                 _set_run_font_name(Run(r, p), fd["cn"], fd["en"])
             return True, _in_toc
         if _is_cover_block(p_el, cfg):
-            _format_cover_para(p_el, cfg, text)
+            _format_cover_para(p_el, cfg, text, stats)
             st["paras"] = st.get("paras", 0) + 1
             return True, _in_toc
         # 首个非封面段：结束封面区，按正常流程继续
