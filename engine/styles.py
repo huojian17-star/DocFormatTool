@@ -16,12 +16,12 @@ def iter_runs(par):
         yield Run(r, par)
 
 
-def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_color=True):
-    """同时设置中文字体（eastAsia）与西文字体，清除字符间距，默认清除文字颜色。
+def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_color=True, clear_italic=True):
+    """同时设置中文字体（eastAsia）与西文字体，清除字符间距，默认清除颜色与斜体。
 
-    输入文档常见"两端对齐 + 手动加宽字符间距 + 彩色强调/部分加粗"的排版习惯，
-    保留会导致每行字数骤减、颜色花哨、加粗不统一。中文论文默认黑色不加粗。
-    clear_color=False 时保留原文颜色（高级选项"保留原文文字颜色"）。
+    输入文档常见"两端对齐 + 手动加宽字符间距 + 彩色强调/部分加粗/个别斜体"的排版习惯，
+    保留会导致每行字数骤减、颜色花哨、加粗/斜体不统一。
+    clear_color=False / clear_italic=False 时保留原文（高级选项开关）。
     """
     run.font.name = en_font
     rpr = run._element.get_or_add_rPr()
@@ -43,10 +43,10 @@ def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_
     run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold
-    # 斜体：默认清除（输入文档常有个别 run 斜体残留）；显式 italic=True 才保留
-    if italic is None:
+    # 斜体：默认清除（输入文档常有个别 run 斜体残留）；preserve_italics 开启或显式 italic=True 才保留
+    if clear_italic:
         run.font.italic = False
-    else:
+    elif italic is not None:
         run.font.italic = bool(italic)
 
 
@@ -90,7 +90,8 @@ def format_heading(par, cfg, level: int):
     pf.right_indent = Cm(0)
     for run in iter_runs(par):
         _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=f.get("bold", True), italic=False,
-                      clear_color=not cfg.get("preserve_colors", False))
+                      clear_color=not cfg.get("preserve_colors", False),
+                      clear_italic=not cfg.get("preserve_italics", False))
     # 空 run（无文字）也建一个以便样式生效
     if not par.runs:
         run = par.add_run(par.text or "")
@@ -110,7 +111,8 @@ def format_body(par, cfg):
     pf.right_indent = Cm(0)
     for run in iter_runs(par):
         _set_run_font(run, f["cn"], f["en"], f["size_pt"], bold=False, italic=False,
-                      clear_color=not cfg.get("preserve_colors", False))
+                      clear_color=not cfg.get("preserve_colors", False),
+                      clear_italic=not cfg.get("preserve_italics", False))
     chars = cfg["paragraph"].get("first_line_indent_chars", 2)
     if chars:
         set_first_line_indent(par, chars)

@@ -2,7 +2,7 @@
 """WPS COM 转 PDF（单方法，带 90s 超时保护）。"""
 import os, sys, time, threading
 
-SRC = r"F:\论文排版工具_测试包\_验证7_已排版.docx"
+SRC = r"F:\论文排版工具_测试包\_check_管理2.docx"
 OUT = r"F:\论文排版工具_测试包\_render_check.pdf"
 
 def do_convert():
@@ -23,6 +23,7 @@ t.start()
 t.join(timeout=90)
 if t.is_alive():
     print("WPS COM 超时（90s）——可能被当前打开的 WPS 实例冲突")
+
 
 
 
