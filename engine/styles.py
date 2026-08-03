@@ -40,6 +40,10 @@ def _set_run_font(run, cn_font, en_font, size_pt, bold=None, italic=None, clear_
         col = rpr.find(qn("w:color"))
         if col is not None:
             rpr.remove(col)
+    u = rpr.find(qn("w:u"))
+    if u is not None:
+        # 下划线多为从网页/富文本复制残留，参考文献与正文规范均不需要，强制清除
+        rpr.remove(u)
     run.font.size = Pt(size_pt)
     if bold is not None:
         run.font.bold = bold
