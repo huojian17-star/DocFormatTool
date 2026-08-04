@@ -106,6 +106,11 @@ def main():
     import lightgbm as lgb
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import accuracy_score, classification_report
+    # 过滤样本 <2 的类（stratify 需要每类至少 2 条）
+    from collections import Counter as _C
+    cnt = _C(y.tolist())
+    keep = [i for i in range(len(y)) if cnt[y[i]] >= 2]
+    X, y = X[keep], y[keep]
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     model = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.08,
                                num_leaves=15, max_depth=4, class_weight="balanced", verbose=-1)
