@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
-  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.5/DocFormatTool.exe",
-  "note": "参考文献 OpenXML 规范化：强制左对齐防短条目字距拉伸、清除下划线/加粗残留、悬挂缩进；下划线上下文清洗（封面/表单填空下划线智能保留）；标题主题色统一黑色；新增保留原文颜色/斜体开关"
+  "version": "1.0.6",
+  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.6/DocFormatTool.exe",
+  "note": "修复自动更新问题（检查超时放宽/下载失败给出手动下载指引/覆盖失败提示）；高级选项展开后底部按钮不再被挤出"
 }
