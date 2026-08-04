@@ -1,8 +1,9 @@
 {
-  "version": "1.0.12",
+  "version": "1.0.13",
   "url": "https://ghfast.top/https://raw.githubusercontent.com/huojian17-star/DocFormatTool/master/releases/updater.exe",
-  "note": "v1.0.12：测试版（验证自动更新链路，稍后恢复）。",
+  "note": "v1.0.13：测试版（验证更新链路，稍后恢复）。",
   "manual_url": "https://wwavh.lanzoul.com/b01euoissf",
   "manual_pwd": "fup2",
-  "full_url": "https://ghfast.top/https://raw.githubusercontent.com/huojian17-star/DocFormatTool/master/releases/DocFormatTool.exe"
+  "full_url": "https://ghfast.top/https://raw.githubusercontent.com/huojian17-star/DocFormatTool/master/releases/DocFormatTool.exe",
+  "sha256": "7fedd54e5ca5cfac8fa954b9f81871de551b859fd65b18f877cabef35bbc896f"
 }
