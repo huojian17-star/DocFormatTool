@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
-"""版本号 1.0.5 -> 1.0.6（纯 python 改，避免 PowerShell 编码坑）"""
+"""版本号 1.0.6 -> 1.0.7（纯 python，避免 PowerShell 编码/转义坑）"""
 import json
 
-# 1. license/version.py
 p = r'license\version.py'
 s = open(p, encoding='utf-8').read()
-old = 'VERSION = "1.0.5"'
-new = 'VERSION = "1.0.6"'
-assert old in s, 'version.py 未找到 1.0.5'
+old = 'VERSION = "1.0.6"'
+new = 'VERSION = "1.0.7"'
+assert old in s, 'version.py 未找到 1.0.6'
 s = s.replace(old, new)
 open(p, 'w', encoding='utf-8', newline='').write(s)
 print('version.py ->', new)
 
-# 2. version.json
 v = json.load(open('version.json', encoding='utf-8'))
-v['version'] = '1.0.6'
-v['url'] = 'https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.6/DocFormatTool.exe'
-v['note'] = '修复自动更新问题（检查超时放宽/下载失败给出手动下载指引/覆盖失败提示）；高级选项展开后底部按钮不再被挤出'
+v['version'] = '1.0.7'
+v['url'] = 'https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.7/DocFormatTool.exe'
+v['note'] = '自动更新增强：下载进度窗口 + 60秒超时兜底（网络慢不再无限等待，失败给出手动下载指引）'
 open('version.json', 'w', encoding='utf-8', newline='').write(json.dumps(v, ensure_ascii=False, indent=2))
 print('version.json ->', v['version'])
-
 raw = open('version.json', 'rb').read(3)
-print('version.json 无BOM:', raw != b'\xef\xbb\xbf')
+print('无BOM:', raw != b'\xef\xbb\xbf')
