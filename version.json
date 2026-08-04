@@ -1,7 +1,7 @@
 {
   "version": "1.0.9",
   "url": "https://ghfast.top/https://raw.githubusercontent.com/huojian17-star/DocFormatTool/master/releases/updater.exe",
-  "note": "v1.0.9：修复标题样式问题——摘要/目录/参考文献进入样式集与导航（Heading1），论文题目用标题样式；此前部分标题显示为正文。",
+  "note": "v1.0.9：标题层级全面修复——1) 摘要/Abstract/目录/参考文献/致谢进入样式集与导航（标题1），论文题目用标题样式，不再显示为正文；2) 中文公文编号层级支持：一、→标题1，（一）→标题2，1.→标题3；混合体系（1）不再误判；支持壹、/① 大写序号；3) 无编号大字号标题也能识别。",
   "manual_url": "https://wwavh.lanzoul.com/b01euoissf",
   "manual_pwd": "fup2",
   "full_url": "https://ghfast.top/https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.9/DocFormatTool.exe"
