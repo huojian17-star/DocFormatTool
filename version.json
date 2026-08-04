@@ -1,7 +1,7 @@
 {
-  "version": "1.0.10",
+  "version": "1.0.11",
   "url": "https://ghfast.top/https://raw.githubusercontent.com/huojian17-star/DocFormatTool/master/releases/updater.exe",
-  "note": "v1.0.10：智能识别升级——摘要/关键词/参考文献独立样式进样式集、论文题目自动套标题样式、脚注/数据来源不误判标题、法条公文条款正确处理；排版前弹窗确认拿不准的段落(显示完整段落+前后文+程序猜测)；修复内置模板丢失与法条文档排版空白。",
+  "note": "v1.0.11：修复自动更新——点击\"自动更新\"无反应/进度窗口不显示/失败无提示（三个线程与闭包问题）。",
   "manual_url": "https://wwavh.lanzoul.com/b01euoissf",
   "manual_pwd": "fup2",
   "full_url": "https://ghfast.top/https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.9/DocFormatTool.exe"
