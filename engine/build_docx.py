@@ -281,6 +281,40 @@ def _guess_heading_by_format(p, cfg, text):
     return 3
 
 
+def _adjust_heading_level(t, text, st):
+    """中文公文编号体系层级修正。
+
+    输入文档可能用 一、/（一）/1. 或 第一章/1.1/1.1.1 等不同编号体系。
+    仅按前缀格式会把 （一）、1. 都判成 H1；这里结合"前缀格式 + 前文最近标题格式"
+    推断真实层级：一、→H1，（一）→H2，中文体系下的 1.→H3；数字体系保持 1.→H1。
+    """
+    import re as _re
+    last = st.get("last_heading_fmt")  # 最近一个标题的编号格式
+    if _re.match(r"^[（(]\s*[\d一二三四五六七八九十]{1,3}\s*[）)]", text):
+        fmt, lvl = "PAREN", 2            # （一）→ H2
+    elif _re.match(r"^[一二三四五六七八九十]{1,3}\s*[、,．.]", text):
+        fmt, lvl = "CN", 1               # 一、→ H1
+    elif _re.match(r"^第[一二三四五六七八九十百千零〇]{1,3}[章篇卷]", text):
+        fmt, lvl = "CNCH", 1             # 第一章 → H1
+    elif _re.match(r"^\d{1,2}\s*[、.．](?!\d)", text):
+        if last in ("CN", "PAREN"):
+            fmt, lvl = "NUM", 3          # 中文体系下的 1. → H3
+        elif last == "NUM":
+            fmt, lvl = "NUM", st.get("last_num_level", 1)  # 同级数字（1.→2.）保持层级
+        else:
+            fmt, lvl = "NUM", 1          # 数字体系 1. → H1
+        st["last_num_level"] = lvl
+    elif _re.match(r"^\d{1,2}[.．]\d{1,2}[.．]\d{1,2}\s*", text):
+        fmt, lvl = "DOT3", 3
+    elif _re.match(r"^\d{1,2}[.．]\d{1,2}\s*", text):
+        fmt, lvl = "DOT2", 2
+    else:
+        fmt, lvl = None, int(t[-1])      # 无编号标题保持 classify 结果
+    if fmt:
+        st["last_heading_fmt"] = fmt
+    return "heading%d" % lvl
+
+
 def _set_pstyle(p_el, style_id: str):
     """给段落设置 Word 内置样式（如 Heading1），让标题进入样式集/导航窗格/目录收集。"""
     pPr = p_el.find(qn("w:pPr"))
@@ -475,6 +509,10 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         return False, _in_toc
 
     t, _ = infer._classify(text)
+    # 中文公文编号体系层级修正：一、→H1，（一）→H2，1.→H3
+    # （不是所有人都用 1/1.1/1.1.1 数字体系；"（一）"、"1." 常被误判为 H1）
+    if t in ("heading1", "heading2", "heading3"):
+        t = _adjust_heading_level(t, text, st)
     if t == "heading1":
         S.format_heading(p, cfg, 1)
         _set_pstyle(p_el, "Heading1")  # 进入 Word 样式集/目录收集
