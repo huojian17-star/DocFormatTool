@@ -210,13 +210,17 @@ def _format_cover_para(p_el, cfg, text, stats=None):
                 sizes.append(int(sz.get(qn("w:val"))) / 2)
     title_size = cfg.get("cover", {}).get("title_size_pt", 22)
     exclude = ("毕业论文", "学位论文", "学院", "大学", "学校", "学号", "专业",
-               "姓名", "指导", "完成日期", "目录", "摘要", "Abstract", "论文题目")
+               "专 业", "学 号", "学 院", "姓 名", "姓名", "指导", "完成日期",
+               "目录", "摘要", "Abstract", "论文题目")
     max_size = max(sizes, default=0)
+    norm = text.replace(" ", "")  # 封面字段常带多空格（"专    业"），统一去空格判断
     is_title = (5 <= len(text) <= 40 and max_size > title_size + 6
-                and not any(k in text for k in exclude))
+                and not any(k.replace(" ", "") in norm for k in exclude))
     if is_title:
         p = Paragraph(p_el, None)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # 文档标题（论文题目）：设 Title 样式，避免样式集里显示为正文
+        _set_pstyle(p_el, "Title")
         # 清缩进（输入超大字号时可能带了缩进，22pt 下会拆行）+ 控制段距
         pf = p.paragraph_format
         pf.left_indent = Cm(0)
@@ -420,9 +424,10 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
 
     # 目录区：文档自带目录页时，"目 录"标题后的条目不套标题格式
     if not _in_toc and text and "目" in text and "录" in text and len(text) <= 10:
-        # 目录标题：居中黑体，进入目录区
+        # 目录标题：居中黑体，进入目录区；设 Heading1 样式让它在样式集/导航可见
         fd = cfg["fonts"]["heading1"]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _set_pstyle(p_el, "Heading1")
         for r in p_el.iter(qn("w:r")):
             S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"], bold=True)
             st["runs_set"] = st.get("runs_set", 0) + 1
@@ -486,9 +491,10 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         # "摘要：xxx" 长句（摘要标题+内容混合）→ 按正文处理，不套标题格式
         S.format_body(p, cfg)
     elif t == "abstract_heading":
-        # 摘要标题：独立字体（黑体四号居中，区别于章节标题）
+        # 摘要标题：独立字体（黑体四号居中，区别于章节标题）；设 Heading1 进入样式集/导航
         fd = cfg["fonts"].get("abstract_heading", cfg["fonts"]["heading1"])
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _set_pstyle(p_el, "Heading1")
         for r in p_el.iter(qn("w:r")):
             S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"], bold=True)
     elif t == "keywords":
