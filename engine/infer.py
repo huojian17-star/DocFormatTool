@@ -128,14 +128,23 @@ def _split_table_row(line: str) -> list:
 
 
 def _mark_cover(structs):
-    """把文档开头（摘要/关键词/首个标题之前）的连续非空段标记为封面行。"""
+    """把文档开头（摘要/关键词/首个标题之前）的连续非空段标记为封面行。
+    限制：最多 8 条；遇到"第X条"（法条/公文正文）立即停止——防止无章节标题的
+    法条文档整篇被误判为封面（导致 build 正文为空）。"""
+    count = 0
     for i, st in enumerate(structs):
         if st["type"] == "blank":
             continue
         if st["type"] in ("abstract_heading", "keywords", "md_table", "code_block") \
                 or is_heading(st["type"]):
             break
+        # 法条/正文特征：第X条（"第一条 为了…"）→ 正文开始，非封面
+        if re.match(r"^第[一二三四五六七八九十百零0-9]+条", st.get("text", "")):
+            break
+        if count >= 12:
+            break
         st["type"] = "cover"
+        count += 1
     return structs
 
 

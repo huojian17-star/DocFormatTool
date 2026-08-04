@@ -33,6 +33,11 @@ def build(cfg: dict, structs: list, dst: str, base_dir: str = "") -> str:
 
     cover_seg = [st for st in structs if st["type"] == "cover"]
     rest = [st for st in structs if st["type"] != "cover"]
+    # 兜底：全 cover（无标题/法条文档整篇被标封面）→ 内容转正文，绝不丢内容
+    if not rest and len(cover_seg) > 8:
+        cover_seg, rest = cover_seg[:8], cover_seg[8:]
+        for st in rest:
+            st["type"] = "body"
     has_cover = bool(cover_seg) and cfg["cover"].get("enabled", True)
 
     if has_cover:
