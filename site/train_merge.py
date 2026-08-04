@@ -55,7 +55,27 @@ def load():
             X.append([f[k] for k in FEAT_KEYS])
             y.append(ROLE_IDX[r])
             srcs.append("arxiv")
-    # 3) 规则高置信（samples_balanced 中低置信段排除——只保留规则明确类）
+    # 3) paper.edu.cn 元数据（标题/摘要/关键词——论文特有结构真标签）
+    fp = os.path.join(TRAIN_DIR, "paperedu.jsonl")
+    if os.path.exists(fp):
+        for line in open(fp, encoding="utf-8"):
+            try:
+                d = json.loads(line)
+            except Exception:
+                continue
+            r = d.get("role", "")
+            if r not in ("heading1", "abstract_heading", "keywords"):
+                continue
+            t = d.get("text", "")
+            if r == "abstract_heading" and len(t) < 30:
+                continue
+            if r == "keywords" and (t.startswith("关键词：关键词") or len(t) < 6):
+                continue
+            f = features(t)
+            X.append([f[k] for k in FEAT_KEYS])
+            y.append(ROLE_IDX[r])
+            srcs.append("paperedu")
+    # 4) 规则高置信（samples_balanced 中低置信段排除——只保留规则明确类）
     fp = os.path.join(TRAIN_DIR, "samples_balanced.jsonl")
     if os.path.exists(fp):
         for line in open(fp, encoding="utf-8"):
