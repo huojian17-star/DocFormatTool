@@ -172,6 +172,11 @@ _NOT_HEADING_FIRST = set(
     "我们你们他们它们这那"
 )
 _HEADING_PREFIX_RE = re.compile(r"^[第\d.．一二三四五六七八九十百千零〇（(]+[章篇卷、:：\s]*")
+# 脚注/注释特征：编号后接长句内容（非标题短句）——"1. 数据来源于国家统计局：https://..." 
+# 是脚注/资料来源，不是三级标题
+_NOTE_CONTENT_RE = re.compile(
+    r"来源于|数据来源[:：]|资料来源[:：]|注[:：]|注释|脚注|尾注|参见|https?://|www\.",
+    re.IGNORECASE)
 
 
 def _is_heading_like(s: str, matched: bool, dotted: bool = False) -> bool:
@@ -189,6 +194,9 @@ def _is_heading_like(s: str, matched: bool, dotted: bool = False) -> bool:
     # 编号后的内容首字：量词/虚词/代词开头 → 不是标题（如"3 个样本""2.5 元""1.1 节回顾"）
     body = _HEADING_PREFIX_RE.sub("", s, count=1).lstrip(" ")
     if body and body[0] in _NOT_HEADING_FIRST and not dotted:
+        return False
+    # 脚注/注释特征（URL/资料来源/注：等）→ 非标题
+    if _NOTE_CONTENT_RE.search(s):
         return False
     # 数字 0 开头 → 小数/统计值，非标题编号（"0.05 显著性""0 个样本"）
     m = re.match(r"^\s*0", s)

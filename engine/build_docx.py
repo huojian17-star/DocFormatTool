@@ -139,7 +139,7 @@ def _reformat_existing_core(cfg: dict, src: str, dst: str) -> dict:
             if nt:
                 next_text = nt
                 break
-        in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc, next_text)
+        in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc, next_text, doc)
 
     doc.save(dst)
     stats["out"] = dst
@@ -214,7 +214,9 @@ def _format_cover_para(p_el, cfg, text, stats=None):
                "目录", "摘要", "Abstract", "论文题目")
     max_size = max(sizes, default=0)
     norm = text.replace(" ", "")  # 封面字段常带多空格（"专    业"），统一去空格判断
-    is_title = (5 <= len(text) <= 40 and max_size > title_size + 6
+    # 题目判定：封面区里字号明显大于正文（≥16pt）的短段 → 设 Title 样式。
+    # 之前要求 >28pt 才识别，导致正常大小（16~22pt）的题目永远显示为正文。
+    is_title = (5 <= len(text) <= 40 and max_size > title_size - 6
                 and not any(k.replace(" ", "") in norm for k in exclude))
     if is_title:
         p = Paragraph(p_el, None)
@@ -327,6 +329,23 @@ def _set_pstyle(p_el, style_id: str):
         pPr.insert(0, ps)
     ps.set(qn("w:val"), style_id)
 
+def _ensure_custom_style(doc, style_name, base="Normal"):
+    """确保文档存在指定名称的段落样式（WPS 样式集会显示中文样式名）。
+    已存在则复用；不存在则基于 base 创建。返回样式对象。"""
+    try:
+        return doc.styles[style_name]
+    except KeyError:
+        from docx.enum.style import WD_STYLE_TYPE
+        st = doc.styles.add_style(style_name, WD_STYLE_TYPE.PARAGRAPH)
+        try:
+            st.base_style = doc.styles[base]
+        except Exception:
+            pass
+        return st
+
+
+
+
 
 def _clear_paragraph_indent(p_el):
     """彻底清除段落缩进（删除整个 w:ind，含 firstLineChars/left 等全部残留）。
@@ -417,7 +436,7 @@ def _upgrade_heading_style(st_el):
             del col.attrib[qn(attr)]
 
 
-def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, next_text=""):
+def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, next_text="", doc=None):
     """统一处理一个段落（顶层正文/标题/表格内/文本框内）。
 
     含图片/公式的段落原样保留仅居中；其余按文本特征套角色格式。
@@ -516,6 +535,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
     if t == "heading1":
         S.format_heading(p, cfg, 1)
         _set_pstyle(p_el, "Heading1")  # 进入 Word 样式集/目录收集
+        st["abs_zone"] = False  # 章节标题出现 → 摘要区结束
         st["h1"] = st.get("h1", 0) + 1
     elif t == "heading2":
         S.format_heading(p, cfg, 2)
@@ -526,17 +546,26 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         _set_pstyle(p_el, "Heading3")
         st["h3"] = st.get("h3", 0) + 1
     elif t == "abstract_heading" and len(text) > 20:
-        # "摘要：xxx" 长句（摘要标题+内容混合）→ 按正文处理，不套标题格式
+        # "摘要：xxx" 长句（摘要标题+内容混合）→ 应用"摘要"自定义样式（样式集可见，非正文）
+        _ensure_custom_style(doc, "摘要")
+        _set_pstyle(p_el, "摘要")
         S.format_body(p, cfg)
+        st["abs_zone"] = True
+        st["abs_zone_n"] = 0
     elif t == "abstract_heading":
         # 摘要标题：独立字体（黑体四号居中，区别于章节标题）；设 Heading1 进入样式集/导航
         fd = cfg["fonts"].get("abstract_heading", cfg["fonts"]["heading1"])
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _set_pstyle(p_el, "Heading1")
+        st["abs_zone"] = True
+        st["abs_zone_n"] = 0
         for r in p_el.iter(qn("w:r")):
             S._set_run_font(Run(r, p), fd["cn"], fd["en"], fd["size_pt"], bold=True)
     elif t == "keywords":
-        # 关键词行：标签（关键词：/Keywords:/Index Terms—/CCS Concepts •）黑体加粗，内容正文
+        # 关键词行：应用"关键词"自定义样式（样式集可见，非正文）；标签黑体加粗，内容正文
+        st["abs_zone"] = False
+        _ensure_custom_style(doc, "关键词")
+        _set_pstyle(p_el, "关键词")
         kw_fd = cfg["fonts"].get("keywords", cfg["fonts"].get("abstract_heading", cfg["fonts"]["heading1"]))
         bd_fd = cfg["fonts"]["body"]
         p.paragraph_format.line_spacing = par_ls(cfg)
@@ -559,7 +588,12 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
     elif t in ("ref_heading", "appendix"):
         S.format_heading(p, cfg, 1)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _set_pstyle(p_el, "Heading1")  # 参考文献/附录标题进入样式集/导航
+        st["h1"] = st.get("h1", 0) + 1
     elif t == "ref_item":
+        # 参考文献条目：应用"参考文献"自定义样式（样式集可见，非正文）
+        _ensure_custom_style(doc, "参考文献")
+        _set_pstyle(p_el, "参考文献")
         fd = cfg["fonts"].get("ref", cfg["fonts"]["body"])
         pf = p.paragraph_format
         pf.line_spacing = par_ls(cfg)
@@ -594,6 +628,13 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         else:
             # 正文：规范化字体、行距、首行缩进
             S.format_body(p, cfg)
+            # 摘要区内正文段（摘要标题后、关键词前，最多 3 段）→ 应用"摘要"样式（样式集可见）
+            if st.get("abs_zone") and st.get("abs_zone_n", 0) < 3:
+                _ensure_custom_style(doc, "摘要")
+                _set_pstyle(p_el, "摘要")
+                st["abs_zone_n"] = st.get("abs_zone_n", 0) + 1
+            elif st.get("abs_zone"):
+                st["abs_zone"] = False  # 超过摘要区范围，退出（防误伤正文）
     st["paras"] = st.get("paras", 0) + 1
     return False, _in_toc
 
