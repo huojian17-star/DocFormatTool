@@ -159,8 +159,31 @@ jobs = [
     ("对比_封面.png", ["本科毕业论文"], ["本科毕业论文"], "封面：字号排版规范", "超大字号自动降为模板字号 · 居中 · 填空下划线保留"),
 ]
 
+
+def make_showcase():
+    """英文摘要单张展示（3:4 统一画布，备用图）"""
+    a = fitz.open(AFTER)
+    ia = render_page(a, find_page(a, ["Abstract"]))
+    base = Image.new("RGBA", CANVAS, BG)
+    d = ImageDraw.Draw(base)
+    d.text((PAD, 46), "英文摘要规范排版", font=font(40, bold=True), fill=TEXT_MAIN)
+    cw = CANVAS[0] - PAD * 2
+    h = ia.height
+    ch = int(cw * h / ia.width * 1.05)
+    if ch > 1050:
+        ch = 1050
+        cw = int(ch * ia.width / h)
+    cx = (CANVAS[0] - cw) // 2
+    card_with_shadow(base, ia, cx, 120, cw, ch)
+    d = ImageDraw.Draw(base)
+    d.text((PAD, 1330), "标题黑体居中 · 正文 Times New Roman · 关键词规范", font=font(27), fill=TEXT_SUB)
+    base.convert("RGB").save(os.path.join(OUT_DIR, "展示_英文摘要.png"))
+    print("生成: 展示_英文摘要.png")
+    a.close()
+
 for name, kb, ka, title, desc in jobs:
     make_compare(name, kb, ka, title, desc)
 
 make_cover()
+make_showcase()
 print("全部完成 →", OUT_DIR)
