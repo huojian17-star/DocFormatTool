@@ -1,5 +1,7 @@
 {
   "version": "1.0.7",
   "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.7/DocFormatTool.exe",
-  "note": "自动更新增强：下载进度窗口 + 60秒超时兜底（网络慢不再无限等待，失败给出手动下载指引）"
+  "note": "自动更新增强：下载进度窗口 + 60秒超时兜底（网络慢不再无限等待，失败给出手动下载指引）",
+  "manual_url": "https://wwavh.lanzoul.com/iu1i640hnz6b",
+  "manual_pwd": "8u6z"
 }
