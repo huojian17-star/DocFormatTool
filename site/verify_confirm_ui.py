@@ -8,7 +8,9 @@ from app.main import App
 
 app = App()
 app.update()
-items = [(0, '1. 研究背景与意义'), (1, '2. 主要研究方法介绍'), (2, '1. 优点：效率高')]
+items = [(5, '1. 研究背景与意义', '随着人工智能技术的快速发展，教育领域正在经历深刻变革。', '本章介绍研究的背景与意义。'),
+         (12, '2. 主要研究方法介绍', '研究背景正文内容。', '研究意义正文。'),
+         (20, '1. 优点：效率高', '该方案具有以下优点：', '缺点是需要较高成本。')]
 
 state = {}
 def auto_action():
@@ -44,7 +46,7 @@ def auto_action():
     state['no_win'] = True
 
 app.after(300, auto_action)
-forced = app._confirm_uncertain(items)
+forced = app._confirm_uncertain_docx(items)
 print('窗口标题:', state.get('win_title'))
 print()
 print('=== Label 文本 ===')
