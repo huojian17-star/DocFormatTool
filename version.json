@@ -1,5 +1,5 @@
 {
   "version": "1.0.6",
-  "url": "https://cdn.jsdelivr.net/gh/huojian17-star/DocFormatTool@master/dist/DocFormatTool.exe",
+  "url": "https://cdn.jsdelivr.net/gh/huojian17-star/DocFormatTool@master/releases/DocFormatTool.exe",
   "note": "修复自动更新问题（检查超时放宽/下载失败给出手动下载指引/覆盖失败提示）；高级选项展开后底部按钮不再被挤出"
 }
