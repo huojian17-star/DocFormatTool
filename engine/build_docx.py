@@ -81,16 +81,18 @@ def _log_error(src: str):
         pass
 
 
-def reformat_existing(cfg: dict, src: str, dst: str) -> dict:
-    """改写式排版入口：异常时记录错误日志并抛出（GUI 显示给用户）。"""
+def reformat_existing(cfg: dict, src: str, dst: str, forced_map: dict = None) -> dict:
+    """改写式排版入口：异常时记录错误日志并抛出（GUI 显示给用户）。
+    forced_map: {段落索引: 强制角色} —— 用户对低置信段落的确认覆盖（如 {"12": "body", "15": "heading1"}）。"""
     try:
-        return _reformat_existing_core(cfg, src, dst)
+        return _reformat_existing_core(cfg, src, dst, forced_map or {})
     except Exception:
         _log_error(src)
         raise
 
 
-def _reformat_existing_core(cfg: dict, src: str, dst: str) -> dict:
+def _reformat_existing_core(cfg: dict, src: str, dst: str, forced_map: dict = None) -> dict:
+    forced_map = forced_map or {}
     """改写式排版：保留原文档全部内容（图片/表格/公式/超链接），只规范化格式。
 
     用于 .docx 输入（学生已有带图表的 Word 文档）；.txt/.md 走 build()。
@@ -140,7 +142,8 @@ def _reformat_existing_core(cfg: dict, src: str, dst: str) -> dict:
             if nt:
                 next_text = nt
                 break
-        in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc, next_text, doc, outline_map)
+        in_cover, in_toc = _reformat_paragraph(p_el, cfg, in_cover, stats, in_toc, next_text, doc, outline_map,
+                                           forced_map)
 
     doc.save(dst)
     stats["out"] = dst
@@ -504,7 +507,8 @@ def _upgrade_heading_style(st_el):
             del col.attrib[qn(attr)]
 
 
-def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, next_text="", doc=None, outline_map=None):
+def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, next_text="", doc=None, outline_map=None,
+                      forced_map=None):
     """统一处理一个段落（顶层正文/标题/表格内/文本框内）。
 
     含图片/公式的段落原样保留仅居中；其余按文本特征套角色格式。
@@ -542,6 +546,19 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
             return True, _in_toc
         # 首个非封面段：结束封面区，按正常流程继续
     _in_cover = False
+
+    # 用户确认覆盖（最高优先级）：低置信段落的角色由用户指定（键=段落全文，文本匹配不受目录插入影响）
+    forced_type = forced_map.get(text) if forced_map else None
+    if forced_type:
+        t = forced_type
+        if t.startswith("heading"):
+            S.format_heading(p, cfg, int(t[-1]))
+            _set_pstyle(p_el, "Heading" + t[-1])
+            st["h" + t[-1]] = st.get("h" + t[-1], 0) + 1
+        else:
+            S.format_body(p, cfg)
+        st["paras"] = st.get("paras", 0) + 1
+        return _in_cover, _in_toc
 
     # 强信号优先：输入段落已带标题样式/大纲级别 → 直接采用，不靠正则猜（防误判漏判）
     style_lvl = _style_heading_level(p_el, doc, outline_map)
