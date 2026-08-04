@@ -1,7 +1,8 @@
 {
   "version": "1.0.7",
-  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.7/DocFormatTool.exe",
+  "url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.7/updater.exe",
   "note": "自动更新增强：下载进度窗口+60秒超时兜底。若自动下载卡住/失败，请手动下载：蓝奏云 https://wwavh.lanzoul.com/iu1i640hnz6b （提取码 8u6z），或 GitHub Releases 页面下载最新 exe 覆盖即可。",
   "manual_url": "https://wwavh.lanzoul.com/iu1i640hnz6b",
-  "manual_pwd": "8u6z"
+  "manual_pwd": "8u6z",
+  "full_url": "https://github.com/huojian17-star/DocFormatTool/releases/download/v1.0.7/DocFormatTool.exe"
 }
