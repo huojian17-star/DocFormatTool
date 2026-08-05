@@ -69,6 +69,18 @@ def shot_card(path, width, crop_box=None):
     return img.resize((width, h), Image.LANCZOS), h
 
 
+def badge_row(d, items, y):
+    """一行胶囊：动态计算总宽，整体居中排列。items = [(text, bg, fg), ...]"""
+    gap = 16
+    widths = [d.textlength(t, font=font(34, True)) + 28 for t, _, _ in items]
+    total = sum(widths) + gap * (len(items) - 1)
+    x = (CANVAS[0] - total) // 2
+    for (t, bg, fg), w in zip(items, widths):
+        rrect(d, [x, y, x + w, y + 52], 14, bg)
+        d.text((x + 14, y + 8), t, font=font(34, True), fill=fg)
+        x += w + gap
+
+
 def new_base():
     img = Image.new("RGBA", CANVAS, BG)
     return img, ImageDraw.Draw(img)
@@ -93,11 +105,9 @@ d.text((210, 255), "全新 v1.0.16｜界面 交互 吉祥物 全面焕新", font
 shot, sh = shot_card(r'site\xhs_src\top.png', 800, (0, 0, 2460, 1529))
 card_with_shadow(img, shot, (CANVAS[0] - 800) // 2, 430, 800, sh)
 # 底部卖点标签
-badge(d, PAD, 1040, "全新界面", BLUE, "#FFFFFF")
-badge(d, PAD + 220, 1040, "拖拽选文件", BLUE, "#FFFFFF")
-badge(d, PAD + 470, 1040, "滚轮滚动", BLUE, "#FFFFFF")
-badge(d, 150, 1110, "专属吉祥物", BLUE, "#FFFFFF")
-badge(d, 380, 1110, "窗口可最大化", BLUE, "#FFFFFF")
+# 底部卖点标签（每行动态居中）
+badge_row(d, [("全新界面", BLUE, "#FFFFFF"), ("拖拽选文件", BLUE, "#FFFFFF"), ("滚轮滚动", BLUE, "#FFFFFF")], 1040)
+badge_row(d, [("专属吉祥物", BLUE, "#FFFFFF"), ("窗口可最大化", BLUE, "#FFFFFF")], 1110)
 text_center(d, 1230, "完全本地运行 · 论文不离开你的电脑", font(32), TEXT_SUB)
 text_center(d, 1310, "免费 · 免安装 · 开箱即用", font(32, True), GREEN)
 img.convert('RGB').save(os.path.join(OUT, 'xhs_1_cover.png'))
@@ -124,12 +134,12 @@ for title, desc, color in features:
     d.text((PAD + 50, card_y + 130), desc, font=font(30), fill=TEXT_SUB)
     y += 224
 # 底部 CTA 胶囊
-cta = "免费下载：搜「规范文档一键排版工具」"
+cta = "免费下载：GitHub 搜索「DocFormatTool」"
 cf = font(34, True)
 cw = d.textlength(cta, font=cf)
 rrect(d, [CANVAS[0] // 2 - cw // 2 - 40, 1318, CANVAS[0] // 2 + cw // 2 + 40, 1378], 30, GREEN)
 text_center(d, 1330, cta, cf, "#0F172A")
-text_center(d, 1400, "v1.0.16 · 2026-08 更新", font(26), TEXT_SUB)
+text_center(d, 1400, "v1.0.16 · 蓝奏云同步更新 · 2026-08", font(26), TEXT_SUB)
 img.convert('RGB').save(os.path.join(OUT, 'xhs_2_features.png'))
 print('图2 卖点 OK')
 
@@ -159,7 +169,7 @@ d.text((PAD + 40, 350), "标题层级自动识别 · 摘要关键词参考文献
 rrect(d, [PAD, 470, CANVAS[0] - PAD, 720], RADIUS, CARD_DARK)
 d.text((PAD + 40, 510), "怎么拿到？", font=font(44, True), fill=TEXT_MAIN)
 d.text((PAD + 40, 590), "① 老用户：打开软件 → 自动更新到 v1.0.16", font=font(34), fill=TEXT_SUB)
-d.text((PAD + 40, 650), "② 新用户：小红书/蓝奏云下载，免安装开箱即用", font=font(34), fill=TEXT_SUB)
+d.text((PAD + 40, 650), "② 新用户：GitHub 搜「DocFormatTool」或蓝奏云，免安装开箱即用", font=font(34), fill=TEXT_SUB)
 # 吉祥物大图
 mascot2 = Image.open(r'site\mascot_raw.png').convert('RGBA')
 mw2, mh2 = 380, 330
