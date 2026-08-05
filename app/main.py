@@ -72,6 +72,13 @@ class App(_TkBase):
             self.dnd_bind("<<Drop>>", self._on_drop)
             self.ent_input.drop_target_register(DND_FILES)
             self.ent_input.dnd_bind("<<Drop>>", self._on_drop)
+            # 拖拽悬停高亮：提示可放入
+            self.ent_input.dnd_bind("<<DragEnter>>",
+                                    lambda e: self.ent_input.configure(style="DnD.TEntry"))
+            self.ent_input.dnd_bind("<<DragLeave>>",
+                                    lambda e: self.ent_input.configure(style="TEntry"))
+            self.ent_input.dnd_bind("<<Drop>>",
+                                    lambda e: self.ent_input.configure(style="TEntry"))
         except Exception:
             pass
 
@@ -304,6 +311,8 @@ class App(_TkBase):
         style.map("Primary.TButton",
                   background=[("active", self.BTN_HOVER), ("pressed", self.BTN_HOVER)],
                   foreground=[("active", "#FFFFFF"), ("pressed", "#FFFFFF")])
+        # 拖拽悬停高亮：拖文件到输入框时变浅蓝，提示可放入
+        style.configure("DnD.TEntry", fieldbackground="#DBEAFE", foreground=self.FG, bordercolor="#93C5FD")
 
     def _card(self, parent, title):
         """创建白卡片（浅灰边框 + 标题 + 分隔线），返回 (卡片Frame, 内容Frame)。"""
@@ -484,7 +493,8 @@ class App(_TkBase):
         self._card_pt, body = self._card(self._main, "📝  排版")
         self.var_input = tk.StringVar()
         self.var_out = tk.StringVar()
-        tk.Label(body, text="论文文件", bg=self.PANEL, fg=self.FG).grid(
+        tk.Label(body, text="论文文件\n(可拖拽)", bg=self.PANEL, fg=self.FG,
+                 justify="center").grid(
             row=0, column=0, sticky="w", padx=(0, 12), pady=6)
         self.ent_input = ttk.Entry(body, textvariable=self.var_input)
         self.ent_input.grid(row=0, column=1, sticky="ew", pady=6)
@@ -495,7 +505,7 @@ class App(_TkBase):
         ttk.Button(body, text="浏览…", command=self._pick_out).grid(row=1, column=2, padx=6)
         body.columnconfigure(1, weight=1)
         tk.Label(body, text="""提示：
-1. 支持 .txt / .md / .docx；docx 保留原图片表格，仅规范格式
+1. 支持 .txt / .md / .docx，可直接拖拽文件到输入框；docx 保留原图片表格，仅规范格式
 2. 标题建议带编号，如「1」「1.1」「第一章」「一、」
 3. 摘要、关键词、参考文献写在相应位置，程序自动识别
 4. 排版完成会自动质检，通过即符合所选模板格式""",
