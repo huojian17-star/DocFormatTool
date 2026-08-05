@@ -265,7 +265,7 @@ def _set_run_font_name(run, cn_font, en_font):
     rfonts.set(qn("w:eastAsia"), cn_font)
 
 
-def _format_cover_para(p_el, cfg, text, stats=None):
+def _format_cover_para(p_el, cfg, text, stats=None, doc=None):
     """封面段安全统一：只改字体名，布局/字号/对齐全部保持原样。
 
     例外：封面题目若字号爆炸（>模板题目字号+6pt），规范为模板题目字号并居中
@@ -292,13 +292,15 @@ def _format_cover_para(p_el, cfg, text, stats=None):
     norm = text.replace(" ", "")  # 封面字段常带多空格（"专    业"），统一去空格判断
     # 题目判定：封面区里字号明显大于正文（≥16pt）的短段 → 设 Title 样式。
     # 之前要求 >28pt 才识别，导致正常大小（16~22pt）的题目永远显示为正文。
-    is_title = (5 <= len(text) <= 40 and max_size > title_size - 6
-                and not any(k.replace(" ", "") in norm for k in exclude))
+    # 补充：正文格式（12pt）但 ≥15 字的长标题也识别（用户文档标题常无大字号）
+    is_title = (5 <= len(text) <= 40 and not any(k.replace(" ", "") in norm for k in exclude)
+                and (max_size > title_size - 6 or len(text) >= 15))
     if is_title:
         p = Paragraph(p_el, None)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        # 文档标题（论文题目）：设 Title 样式，避免样式集里显示为正文
-        _set_pstyle(p_el, "Title")
+        # 文档标题（论文题目）：设自定义"论文题目"样式（outlineLvl=9 不进导航/目录），避免样式集里显示为正文
+        _ensure_custom_style(doc, "论文题目", outline_lvl=9)
+        _set_pstyle(p_el, "论文题目")
         # 清缩进（输入超大字号时可能带了缩进，22pt 下会拆行）+ 控制段距
         pf = p.paragraph_format
         pf.left_indent = Cm(0)
@@ -405,19 +407,74 @@ def _set_pstyle(p_el, style_id: str):
         pPr.insert(0, ps)
     ps.set(qn("w:val"), style_id)
 
-def _ensure_custom_style(doc, style_name, base="Normal"):
+def _ensure_custom_style(doc, style_name, base="Normal", font_cn=None, font_en=None, size=None,
+                         bold=None, line_spacing=None, first_line_chars=None, outline_lvl=None,
+                         center=False):
     """确保文档存在指定名称的段落样式（WPS 样式集会显示中文样式名）。
-    已存在则复用；不存在则基于 base 创建。返回样式对象。"""
+
+    已存在则复用；不存在则基于 base 创建。按参数写入：
+    - rPr：中文字体(eastAsia)/西文字体(ascii,hAnsi)/字号 sz/szCs/加粗
+    - pPr：行距 spacing/首行缩进 firstLineChars/居中 jc/大纲级别 outlineLvl
+    - qFormat + uiPriority（进快速样式库首屏——WPS 样式集默认只显示 qFormat 样式）
+    返回样式对象。
+    """
+    from docx.enum.style import WD_STYLE_TYPE
     try:
-        return doc.styles[style_name]
+        st = doc.styles[style_name]
     except KeyError:
-        from docx.enum.style import WD_STYLE_TYPE
         st = doc.styles.add_style(style_name, WD_STYLE_TYPE.PARAGRAPH)
         try:
             st.base_style = doc.styles[base]
         except Exception:
             pass
-        return st
+    styl_el = st.element
+    # rPr（字体）
+    if font_cn or size is not None or bold:
+        rpr = styl_el.get_or_add_rPr()
+        if font_cn:
+            rf = rpr.get_or_add_rFonts()
+            rf.set(qn("w:eastAsia"), font_cn)
+            if font_en:
+                rf.set(qn("w:ascii"), font_en)
+                rf.set(qn("w:hAnsi"), font_en)
+        if size is not None:
+            for tag in ("w:sz", "w:szCs"):
+                el = rpr.find(qn(tag))
+                if el is None:
+                    el = OxmlElement(tag)
+                    rpr.append(el)
+                el.set(qn("w:val"), str(int(size * 2)))
+        if bold:
+            if rpr.find(qn("w:b")) is None:
+                rpr.append(OxmlElement("w:b"))
+    # pPr（段落）
+    if line_spacing is not None or first_line_chars is not None or center or outline_lvl is not None:
+        ppr = styl_el.get_or_add_pPr()
+        if line_spacing is not None:
+            sp = OxmlElement("w:spacing")
+            sp.set(qn("w:line"), str(int(line_spacing * 240)))
+            sp.set(qn("w:lineRule"), "auto")
+            ppr.append(sp)
+        if first_line_chars is not None:
+            ind = OxmlElement("w:ind")
+            ind.set(qn("w:firstLineChars"), str(first_line_chars))
+            ppr.append(ind)
+        if center:
+            jc = OxmlElement("w:jc")
+            jc.set(qn("w:val"), "center")
+            ppr.append(jc)
+        if outline_lvl is not None:
+            ol = OxmlElement("w:outlineLvl")
+            ol.set(qn("w:val"), str(outline_lvl))
+            ppr.append(ol)
+    # qFormat + uiPriority（进样式库首屏；WPS 样式集默认显示 qFormat 样式）
+    if styl_el.find(qn("w:qFormat")) is None:
+        styl_el.append(OxmlElement("w:qFormat"))
+    if styl_el.find(qn("w:uiPriority")) is None:
+        up = OxmlElement("w:uiPriority")
+        up.set(qn("w:val"), "10")
+        styl_el.append(up)
+    return st
 
 
 
@@ -546,7 +603,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
                 _set_run_font_name(Run(r, p), fd["cn"], fd["en"])
             return True, _in_toc
         if _is_cover_block(p_el, cfg):
-            _format_cover_para(p_el, cfg, text, stats)
+            _format_cover_para(p_el, cfg, text, stats, doc)
             st["paras"] = st.get("paras", 0) + 1
             return True, _in_toc
         # 首个非封面段：结束封面区，按正常流程继续
@@ -645,10 +702,33 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         _set_pstyle(p_el, "Heading3")
         st["h3"] = st.get("h3", 0) + 1
     elif t == "abstract_heading" and len(text) > 20:
-        # "摘要：xxx" 长句（摘要标题+内容混合）→ 应用"摘要"自定义样式（样式集可见，非正文）
-        _ensure_custom_style(doc, "摘要")
-        _set_pstyle(p_el, "摘要")
-        S.format_body(p, cfg)
+        # "摘要：xxx" 长句 → 拆成"摘  要"标签（摘要样式）+ 内容（摘要正文样式），样式集可见且标签/内容区分
+        _m = re.match(r"^((?:摘\s*要|Abstract|ABSTRACT)\s*[:：])\s*(.*)$", text, re.S)
+        if _m and _m.group(2).strip():
+            _label, _content = "摘  要", _m.group(2).strip()
+            _ensure_custom_style(doc, "摘要", outline_lvl=0)
+            _ensure_custom_style(doc, "摘要正文", outline_lvl=9)
+            import copy as _copy
+            _label_p = _copy.deepcopy(p_el)
+            _set_pstyle(_label_p, "摘要")
+            _wrote = False
+            for _r in _label_p.iter(qn("w:r")):
+                _t = _r.find(qn("w:t"))
+                if _t is not None:
+                    _t.text = _label if not _wrote else ""
+                    _wrote = True
+            p_el.addprevious(_label_p)
+            _set_pstyle(p_el, "摘要正文")
+            _wrote2 = False
+            for _r in p_el.iter(qn("w:r")):
+                _t = _r.find(qn("w:t"))
+                if _t is not None:
+                    _t.text = _content if not _wrote2 else ""
+                    _wrote2 = True
+        else:
+            _ensure_custom_style(doc, "摘要", outline_lvl=0)
+            _set_pstyle(p_el, "摘要")
+            S.format_body(p, cfg)
         st["abs_zone"] = True
         st["abs_zone_n"] = 0
     elif t == "abstract_heading":
@@ -663,7 +743,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
     elif t == "keywords":
         # 关键词行：应用"关键词"自定义样式（样式集可见，非正文）；标签黑体加粗，内容正文
         st["abs_zone"] = False
-        _ensure_custom_style(doc, "关键词")
+        _ensure_custom_style(doc, "关键词", outline_lvl=9)
         _set_pstyle(p_el, "关键词")
         kw_fd = cfg["fonts"].get("keywords", cfg["fonts"].get("abstract_heading", cfg["fonts"]["heading1"]))
         bd_fd = cfg["fonts"]["body"]
@@ -687,6 +767,7 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
     elif t in ("ref_heading", "appendix"):
         S.format_heading(p, cfg, 1)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _ensure_custom_style(doc, "参考文献", outline_lvl=0)
         _set_pstyle(p_el, "Heading1")  # 参考文献/附录标题进入样式集/导航
         st["h1"] = st.get("h1", 0) + 1
     elif t == "ref_item":
@@ -727,10 +808,10 @@ def _reformat_paragraph(p_el, cfg, _in_cover=False, stats=None, _in_toc=False, n
         else:
             # 正文：规范化字体、行距、首行缩进
             S.format_body(p, cfg)
-            # 摘要区内正文段（摘要标题后、关键词前，最多 3 段）→ 应用"摘要"样式（样式集可见）
+            # 摘要区内正文段（摘要标题后、关键词前，最多 3 段）→ 应用"摘要正文"样式（区别于普通正文）
             if st.get("abs_zone") and st.get("abs_zone_n", 0) < 3:
-                _ensure_custom_style(doc, "摘要")
-                _set_pstyle(p_el, "摘要")
+                _ensure_custom_style(doc, "摘要正文", outline_lvl=9)
+                _set_pstyle(p_el, "摘要正文")
                 st["abs_zone_n"] = st.get("abs_zone_n", 0) + 1
             elif st.get("abs_zone"):
                 st["abs_zone"] = False  # 超过摘要区范围，退出（防误伤正文）
@@ -944,8 +1025,11 @@ def _build_cover(doc, cfg, cover_seg):
     title = max(cand, key=len) if cand else ""
     others = [t for t in texts if t not in (school, kind, title) and t not in fields]
 
-    def _line(text, font_cn, font_en, size, bold=False, spacing=2.0, before=0):
+    def _line(text, font_cn, font_en, size, bold=False, spacing=2.0, before=0, style=None):
         p = doc.add_paragraph()
+        if style:
+            _ensure_custom_style(doc, style)
+            _set_py_style(p, doc, style)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.line_spacing = spacing
         if before:
@@ -960,8 +1044,10 @@ def _build_cover(doc, cfg, cover_seg):
         _line(kind, title_font["cn"], title_font["en"], 16, bold=True)
     doc.add_paragraph()
     if title:
+        _ensure_custom_style(doc, "论文题目", outline_lvl=9, font_cn=title_font.get("cn", "黑体"),
+                             font_en=title_font.get("en", "Times New Roman"), size=title_font.get("size_pt", 22), bold=True)
         _line(title, title_font["cn"], title_font["en"],
-              cov.get("title_size_pt", title_font["size_pt"]), bold=True, before=24)
+              cov.get("title_size_pt", title_font["size_pt"]), bold=True, before=24, style="论文题目")
     doc.add_paragraph()
     for t in fields + others:
         _line(t, body_font["cn"], body_font["en"], body_font["size_pt"])
@@ -1075,6 +1161,8 @@ def _apply_body(doc, cfg, structs, base_dir):
             _add_para(doc, cfg, text, "heading3")
         elif t == "abstract_heading":
             _add_para(doc, cfg, cfg["abstract"].get("heading_text", "摘  要"), "abs_heading", center=True)
+        elif t == "abstract_body":
+            _add_para(doc, cfg, text, "abs_body")
         elif t == "keywords":
             _add_para(doc, cfg, text, "keywords")
         elif t == "appendix":
@@ -1111,11 +1199,23 @@ def _add_para(doc, cfg, text, kind, center=False):
         if center:
             pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _add_inline_runs(p, cfg, text, fd, bold=fd.get("bold", True))
+        _ensure_custom_style(doc, "摘要", outline_lvl=0, font_cn=fd.get("cn", "黑体"), font_en=fd.get("en", "Times New Roman"), size=fd.get("size_pt", 14), center=True)
+        _set_py_style(p, doc, "摘要")
+    elif kind == "abs_body":
+        # 摘要正文：独立"摘要正文"样式（区别于普通正文，样式集可见）
+        fd = f["body"]
+        pf.line_spacing = par_ls(cfg)
+        pf.first_line_indent = Cm(0)
+        _ensure_custom_style(doc, "摘要正文", outline_lvl=9, font_cn=fd["cn"], font_en=fd.get("en", "Times New Roman"), size=fd["size_pt"], line_spacing=1.5, first_line_chars=200)
+        _set_py_style(p, doc, "摘要正文")
+        _add_inline_runs(p, cfg, text, fd)
     elif kind == "keywords":
         # 关键词行：标签黑体加粗 + 内容正文
         fd = f.get("keywords", f.get("abstract_heading", f["heading1"]))
         bd = f["body"]
         pf.line_spacing = par_ls(cfg)
+        _ensure_custom_style(doc, "关键词", outline_lvl=9, font_cn=fd["cn"], font_en=fd.get("en", "Times New Roman"), size=fd["size_pt"])
+        _set_py_style(p, doc, "关键词")
         m = re.match(r"^(.{1,20}?[：:—•]\s*)", text)
         label = m.group(1) if m else ""
         rest = text[len(label):]
