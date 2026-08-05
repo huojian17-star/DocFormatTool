@@ -1,3 +1,5 @@
 
 # 卖家端工具，勿提交
 site/gen_key.py
+
+site/gen_key_gui.py
