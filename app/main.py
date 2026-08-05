@@ -44,7 +44,7 @@ class App(tk.Tk):
         self.title("规范文档一键排版工具 v%s" % version_mod.VERSION)
         self.geometry("980x760")
         self.minsize(880, 660)  # 防止被拖小导致按钮消失
-        self.resizable(False, False)  # 禁止拉伸，避免窗口拉大后底部大片空白
+        # 允许拉伸/最大化（窗口化全屏）；底部按钮用 grid 固定，拉大也不会被挤走
         self._apply_theme()
         self._fp = fpmod.fingerprint()
         self._build_ui()
