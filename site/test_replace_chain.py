@@ -28,16 +28,19 @@ bat_path = os.path.join(tdir, 'update.bat')
 open(bat_path, 'w', encoding='gbk', newline='').write(bat)
 print('bat 已写（长度 %d）' % len(bat))
 
-# 执行 bat（模拟用户更新）
+# 执行 bat（模拟用户更新）——先记录 new 的内容 md5（bat 会删除 new，删后无法对比）
+new_md5 = md5(new)
 print('执行 update.bat ...')
 os.startfile(bat_path)
 time.sleep(10)
 
-# 验证替换
-if md5(old) == md5(new):
+# 验证替换（new 应已被 bat 删除——用执行前记录的 new_md5 对比 old）
+replaced = os.path.exists(old) and new_md5 is not None and md5(old) == new_md5
+if replaced:
     print('替换成功: old 已被覆盖为 new 的内容 ✓')
 else:
     print('替换失败: old md5 未变化 ✗')
+print('new 文件已清理:', not os.path.exists(new))
 
 # 验证新进程启动（bat 里 start 启动了 tmp 的 exe）
 found = False
