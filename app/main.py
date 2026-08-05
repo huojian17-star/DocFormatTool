@@ -329,14 +329,8 @@ class App(tk.Tk):
         frm_head = tk.Frame(self, bg=self.PANEL, height=54)
         frm_head.pack(fill="x")
         frm_head.pack_propagate(False)
-        # 吉祥物图标（红圈位置：标题文字左侧；一次 subsample 从原图缩到 ~50px，避免模糊）
-        try:
-            self._mascot_img = tk.PhotoImage(data=_MASCOT_B64).subsample(25, 25)
-            tk.Label(frm_head, image=self._mascot_img, bg=self.PANEL).pack(side="left", padx=(14, 4))
-        except Exception:
-            pass
         tk.Label(frm_head, text="DocFormatTool", bg=self.PANEL, fg="#1E293B",
-                 font=("Microsoft YaHei", 14, "bold")).pack(side="left", padx=6)
+                 font=("Microsoft YaHei", 14, "bold")).pack(side="left", padx=20)
         tk.Label(frm_head, text="规范文档一键排版工具", bg=self.PANEL, fg="#64748B",
                  font=("Microsoft YaHei", 9)).pack(side="left", padx=(8, 0))
         tk.Label(frm_head, text="v" + version_mod.VERSION, bg=self.PANEL, fg=self.FG_DIM,
@@ -350,7 +344,13 @@ class App(tk.Tk):
         frm_side = tk.Frame(frm_body, bg=self.PANEL, width=168)
         frm_side.pack(side="left", fill="y")
         frm_side.pack_propagate(False)
-        tk.Label(frm_side, text="", bg=self.PANEL).pack(pady=6)
+        # 侧边栏顶部：吉祥物大图（140px，缩 9 倍——像素块可见，清晰）
+        try:
+            self._mascot_img = tk.PhotoImage(data=_MASCOT_B64).subsample(9, 9)
+            tk.Label(frm_side, image=self._mascot_img, bg=self.PANEL).pack(pady=(18, 10))
+        except Exception:
+            pass
+        tk.Label(frm_side, text="", bg=self.PANEL).pack()
         self._nav_btns = []
         nav_defs = [("auth", "🏠  首页"), ("pt", "📄  排版"), ("adv", "⚙️  高级选项")]
         for key, txt in nav_defs:
