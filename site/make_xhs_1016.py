@@ -59,6 +59,16 @@ def badge(draw, x, y, s, bg, fg, size=34):
     draw.text((x + 14, y + 8), s, font=f, fill=fg)
 
 
+def shot_card(path, width, crop_box=None):
+    """读截图 → 可选裁切 → resize 到指定宽度（保持比例），返回 (img, 高度)。"""
+    img = Image.open(path)
+    if crop_box:
+        img = img.crop(crop_box)
+    img = img.convert('RGB')
+    h = int(img.height * width / img.width)
+    return img.resize((width, h), Image.LANCZOS), h
+
+
 def new_base():
     img = Image.new("RGBA", CANVAS, BG)
     return img, ImageDraw.Draw(img)
@@ -66,11 +76,11 @@ def new_base():
 
 # ============ 图1 封面 ============
 img, d = new_base()
-# 吉祥物（主标题右侧，放大不孤立）
+# 吉祥物（主标题右侧，缩小不拥挤）
 mascot = Image.open(r'site\mascot_raw.png').convert('RGBA')
-mw, mh = 240, 208
+mw, mh = 200, 174
 mascot_s = mascot.resize((mw, mh), Image.LANCZOS)
-img.paste(mascot_s, (CANVAS[0] - mw - 20, 80), mascot_s)
+img.paste(mascot_s, (CANVAS[0] - mw - 16, 70), mascot_s)
 # 顶部标签
 badge(d, PAD, 70, "v1.0.16 大更新", GREEN, "#0F172A")
 # 主标题
@@ -79,15 +89,15 @@ text_center(d, 150, "论文排版工具", font(78, True), TEXT_MAIN)
 d.text((210, 255), "全新 v1.0.16｜界面 交互 吉祥物 全面焕新", font=font(36, True), fill=ACCENT)
 # 副标题
 # （去重：主标题下方已有更新信息，此处不再重复）
-# 新界面截图（卡片）——裁掉被遮挡区域（左上角混入聊天窗口），取干净主区
-shot = Image.open(r'site\ui_shot_top.png').crop((250, 100, 980, 640))
-card_with_shadow(img, shot, (CANVAS[0] - shot.width) // 2, 420, shot.width, shot.height)
+# 新界面截图（卡片）——用户手截干净原图（裁窗口区域 + 自适应缩放）
+shot, sh = shot_card(r'site\xhs_src\top.png', 800, (0, 0, 2460, 1529))
+card_with_shadow(img, shot, (CANVAS[0] - 800) // 2, 430, 800, sh)
 # 底部卖点标签
 badge(d, PAD, 1040, "全新界面", BLUE, "#FFFFFF")
 badge(d, PAD + 220, 1040, "拖拽选文件", BLUE, "#FFFFFF")
 badge(d, PAD + 470, 1040, "滚轮滚动", BLUE, "#FFFFFF")
-badge(d, PAD, 1110, "专属吉祥物", BLUE, "#FFFFFF")
-badge(d, PAD + 220, 1110, "窗口可最大化", BLUE, "#FFFFFF")
+badge(d, 150, 1110, "专属吉祥物", BLUE, "#FFFFFF")
+badge(d, 380, 1110, "窗口可最大化", BLUE, "#FFFFFF")
 text_center(d, 1230, "完全本地运行 · 论文不离开你的电脑", font(32), TEXT_SUB)
 text_center(d, 1310, "免费 · 免安装 · 开箱即用", font(32, True), GREEN)
 img.convert('RGB').save(os.path.join(OUT, 'xhs_1_cover.png'))
@@ -127,13 +137,13 @@ print('图2 卖点 OK')
 img, d = new_base()
 text_center(d, 70, "新界面长这样", font(64, True), TEXT_MAIN)
 text_center(d, 150, "左边有排排，右边是功能卡片", font(34), TEXT_SUB)
-shot_top = Image.open(r'site\ui_shot_top.png').crop((250, 100, 980, 640))
-card_with_shadow(img, shot_top, (CANVAS[0] - shot_top.width) // 2, 210, shot_top.width, shot_top.height)
-text_center(d, 680, "拖拽文件到窗口任意位置 → 自动填路径", font(34, True), ACCENT)
-shot_pt = Image.open(r'site\ui_shot_pt.png').crop((250, 100, 980, 640))
-card_with_shadow(img, shot_pt, (CANVAS[0] - shot_pt.width) // 2, 760, shot_pt.width, shot_pt.height)
-text_center(d, 1230, "「可拖拽」提示 + 拖拽时输入框变蓝", font(34, True), GREEN)
-text_center(d, 1320, "一键排版固定在底部，随时可点", font(32), TEXT_SUB)
+shot_top, sh_top = shot_card(r'site\xhs_src\top.png', 700, (0, 0, 2460, 1529))
+card_with_shadow(img, shot_top, (CANVAS[0] - 700) // 2, 200, 700, sh_top)
+text_center(d, 660, "拖拽文件到窗口任意位置 → 自动填路径", font(32, True), ACCENT)
+shot_pt, sh_pt = shot_card(r'site\xhs_src\pt.png', 850, (0, 0, 2303, 819))
+card_with_shadow(img, shot_pt, (CANVAS[0] - 850) // 2, 720, 850, sh_pt)
+text_center(d, 1060, "「可拖拽」提示 + 拖拽时输入框变蓝", font(32, True), GREEN)
+text_center(d, 1140, "一键排版固定在底部，随时可点", font(30), TEXT_SUB)
 img.convert('RGB').save(os.path.join(OUT, 'xhs_3_ui.png'))
 print('图3 界面 OK')
 
