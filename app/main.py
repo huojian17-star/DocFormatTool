@@ -64,27 +64,25 @@ class App(_TkBase):
         self._build_menu()
 
     def _setup_dnd(self):
-        """拖拽文件选择（tkinterdnd2）：拖文件到窗口/输入框 → 自动填入输入路径。"""
+        """拖拽文件选择（tkinterdnd2）：只注册窗口一个 drop target，避免与输入框双注册
+        导致 Tk 事件路由冲突（时好时坏）。拖到窗口任意位置都能放。"""
         try:
             if DND_FILES is None or not hasattr(self, "ent_input"):
                 return
             self.drop_target_register(DND_FILES)
             self.dnd_bind("<<Drop>>", self._on_drop)
-            self.ent_input.drop_target_register(DND_FILES)
-            self.ent_input.dnd_bind("<<Drop>>", self._on_drop)
-            # 拖拽悬停高亮：提示可放入
-            self.ent_input.dnd_bind("<<DragEnter>>",
-                                    lambda e: self.ent_input.configure(style="DnD.TEntry"))
-            self.ent_input.dnd_bind("<<DragLeave>>",
-                                    lambda e: self.ent_input.configure(style="TEntry"))
-            self.ent_input.dnd_bind("<<Drop>>",
-                                    lambda e: self.ent_input.configure(style="TEntry"))
+            # 拖拽悬停高亮：拖到窗口任意位置都提示输入框可放入
+            self.dnd_bind("<<DragEnter>>",
+                          lambda e: self.ent_input.configure(style="DnD.TEntry"))
+            self.dnd_bind("<<DragLeave>>",
+                          lambda e: self.ent_input.configure(style="TEntry"))
         except Exception:
             pass
 
     def _on_drop(self, event):
         """拖放回调：解析文件路径填入输入框。"""
         try:
+            self.ent_input.configure(style="TEntry")
             files = self.tk.splitlist(event.data)
             if files:
                 self.var_input.set(files[0])
